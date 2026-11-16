@@ -1,0 +1,38 @@
+% 1. Sabhi players aur unki details dekhne ke liye
+player(Name, Role, Rating).
+
+% 2. Check karne ke liye ke kya Babar Azam elite player hai?
+elite_player(babar_azam).
+
+% 3. Sare elite players (rating >= 85) ke naam nikalne ke liye
+elite_player(Player).
+
+% 4. Check karne ke liye ke kya Shadab Khan potential captain ban sakta hai?
+potential_captain(shadab_khan).
+
+% 5. Sare potential captains ki list nikalne ke liye
+potential_captain(Player).
+
+% 6. Check karne ke liye ke kya Haris Rauf bowling kar sakta hai?
+can_bowl(haris_rauf).
+
+% 7. Team mein bowling karne wale tamam players ki list ke liye
+can_bowl(Player).
+
+% 8. Check karne ke liye ke kya Mohammad Rizwan batting kar sakta hai?
+can_bat(mohammad_rizwan).
+
+% 9. Team mein batting karne wale tamam players ki list ke liye
+can_bat(Player).
+
+% 10. Sirf Batsmen ki list nikalne ke liye
+get_players_by_role(batsman, Player).
+
+% 11. Sirf Bowlers ki list nikalne ke liye
+get_players_by_role(bowler, Player).
+
+% 12. Sirf All-rounders ki list nikalne ke liye
+get_players_by_role(all_rounder, Player).
+
+% 13. Sirf Wicket-keepers ki list nikalne ke liye
+get_players_by_role(wicket_keeper, Player).
