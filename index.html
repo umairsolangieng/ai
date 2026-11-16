@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSCL 3206 - AI Lab Class Quiz Rotation Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c1a2b; --panel:rgba(20,38,62,.72); --line:rgba(150,190,255,.18);
+  --text:#eaf1ff; --muted:#8fa5c7; --amber:#ffb547; --good:#3fe0a0; --bad:#ff5d7a;
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif; --body:'Figtree','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--body);color:var(--text);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;
+  background:radial-gradient(1200px 700px at 15% -10%,#183a63 0%,transparent 60%),radial-gradient(900px 600px at 100% 110%,#3b1d4f 0%,transparent 55%),var(--bg)}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.container{position:relative;z-index:1;width:100%;max-width:720px;padding:32px;border-radius:22px;background:var(--panel);
+  border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:0 30px 80px -20px rgba(0,0,0,.6);animation:rise .9s cubic-bezier(.2,.9,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(30px) scale(.97)}to{opacity:1;transform:none}}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(24px,5vw,34px);line-height:1.1;margin:0;text-align:center;letter-spacing:-.02em}
+h1 span{background:linear-gradient(90deg,var(--amber),#ff7a9c,#7cc4ff,var(--amber));background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+@keyframes flow{to{background-position:250% 0}}
+.subtitle{text-align:center;color:var(--muted);font-size:14px;margin:8px 0 26px}
+.hidden{display:none!important}
+button{font:600 17px var(--body);cursor:pointer}
+.btn{width:100%;margin-top:14px;padding:15px 20px;border:0;border-radius:14px;color:#241600;background:linear-gradient(135deg,#ffc866,var(--amber));
+  box-shadow:0 8px 24px -8px rgba(255,181,71,.7);transition:transform .15s,box-shadow .2s,filter .2s;position:relative;overflow:hidden}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.07)}
+.btn:active{transform:scale(.98)}
+.btn::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);animation:sheen 3.2s ease-in-out infinite}
+@keyframes sheen{60%,100%{transform:translateX(120%)}}
+.btn.green{background:linear-gradient(135deg,#6af0bd,var(--good));box-shadow:0 8px 24px -8px rgba(63,224,160,.7)}
+.upload{border:2px dashed var(--line);border-radius:16px;padding:22px;text-align:center;margin-bottom:18px;transition:border-color .2s,background .2s}
+.upload:hover{border-color:var(--amber);background:rgba(255,181,71,.05)}
+.upload input{margin-top:10px;color:var(--muted);max-width:100%}
+.upload small,.note{color:var(--muted);display:block;margin-top:8px;font-size:13px}
+#file-status.ok{color:var(--good)} #file-status.err{color:var(--bad)}
+.note{text-align:center;font-size:14px;margin:0 0 6px}
+
+/* progress path: one node per student */
+.meta{display:flex;justify-content:space-between;font-weight:600;color:var(--amber);margin-bottom:12px;font-size:15px}
+.path{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:20px}
+.node{width:12px;height:12px;border-radius:50%;background:rgba(150,190,255,.16);transition:background .4s,transform .4s}
+.node.good{background:var(--good);box-shadow:0 0 8px var(--good)} .node.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.node.now{background:var(--amber);animation:ping 1.2s ease-in-out infinite}
+@keyframes ping{0%,100%{box-shadow:0 0 0 0 rgba(255,181,71,.8);transform:scale(1)}50%{box-shadow:0 0 0 8px rgba(255,181,71,0);transform:scale(1.35)}}
+
+.student{position:relative;overflow:hidden;text-align:center;padding:16px 20px;margin-bottom:18px;border-radius:16px;border:1px solid rgba(255,181,71,.5);
+  background:rgba(255,181,71,.08);font:700 clamp(18px,3.6vw,24px) var(--display)}
+.student small{display:block;font:600 13px var(--body);color:var(--amber);letter-spacing:.04em;margin-bottom:2px}
+.student.enter{animation:pick .7s cubic-bezier(.2,1.2,.3,1) both}
+.student.enter::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:0;background:linear-gradient(90deg,transparent,rgba(255,181,71,.45),transparent);animation:scan .8s ease-out both}
+@keyframes pick{from{opacity:0;transform:translateX(-40px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes scan{from{transform:translateX(-100%)}to{transform:translateX(320%)}}
+
+.qbox{padding:6px 2px}
+#question-text{font:700 clamp(19px,3.4vw,24px)/1.35 var(--display);margin-bottom:18px}
+#question-text.enter{animation:fadeup .5s .15s both}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.options{display:grid;gap:12px}
+.opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;border-radius:14px;color:var(--text);background:rgba(255,255,255,.04);
+  border:1.5px solid var(--line);font-weight:600;font-size:17px;transition:transform .18s,border-color .2s,background .2s;animation:fadeup .45s calc(.3s + var(--i)*.12s) both}
+.opt b{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(150,190,255,.14);font:800 15px var(--display);transition:background .2s,color .2s}
+.opt:hover:not(:disabled){transform:translateX(6px);border-color:var(--amber)}
+.opt.sel{border-color:var(--amber);background:rgba(255,181,71,.12)} .opt.sel b{background:var(--amber);color:#241600}
+.opt.right{border-color:var(--good);background:rgba(63,224,160,.16);animation:pop .5s both} .opt.right b{background:var(--good);color:#032}
+.opt.wrong{border-color:var(--bad);background:rgba(255,93,122,.14);animation:shake .5s both} .opt.wrong b{background:var(--bad);color:#2a0710}
+.opt:disabled{cursor:default}
+@keyframes pop{40%{transform:scale(1.04)}}
+@keyframes shake{20%{transform:translateX(-10px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .45s}
+.hint{margin-top:14px;font-size:14px;color:var(--muted);min-height:20px}
+.hint button{background:none;border:0;padding:0;margin:0;font-size:14px;color:var(--amber);text-decoration:underline;text-underline-offset:3px}
+.hint.show{animation:fadeup .4s both;font-style:italic}
+
+#complete-screen{text-align:center}
+#complete-screen h2{font:800 clamp(26px,5vw,34px) var(--display);margin:0 0 6px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0 6px}
+.stat{padding:16px 6px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);animation:fadeup .6s calc(var(--i)*.15s) both}
+.stat strong{display:block;font:800 30px var(--display);color:var(--amber)} .stat span{font-size:13px;color:var(--muted)}
+@media (max-width:520px){.container{padding:22px 18px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+.music-btn,#music-btn{position:fixed;right:16px;bottom:16px;z-index:5;width:auto;margin:0;padding:9px 14px;font-size:14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);backdrop-filter:blur(10px)}
+#music-btn.off{color:var(--muted);text-decoration:line-through}
+:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div class="container">
+  <h1><span>SZABIST AI Lab</span> Class Rotation Quiz</h1>
+  <div class="subtitle">CSCL 3206 - Artificial Intelligence Lab | BS(AI) 3B</div>
+
+  <audio id="bg-audio" src="bgmusic.mp3" loop preload="auto"></audio>
+  <button id="music-btn" class="hidden" onclick="toggleMusic()" aria-label="Music on/off">&#9835; Music on</button>
+  <div style="display:none;">
+    <audio id="correct-audio" src="https://www.myinstants.com/media/sounds/correct-answer-sound-effect.mp3" preload="auto"></audio>
+    <audio id="wrong-audio" src="https://www.myinstants.com/media/sounds/wrong-answer-sound-effect.mp3" preload="auto"></audio>
+  </div>
+
+  <div id="start-screen">
+    <div class="upload">
+      <label for="excel-file" style="font-weight:600">Upload Class Excel File (BSAI 3B.xlsx)</label><br>
+      <input type="file" id="excel-file" accept=".xlsx, .xls">
+      <small id="file-status">No file selected yet.</small>
+    </div>
+    <div class="upload">
+      <label for="json-file" style="font-weight:600">Optional: add more questions (.json)</label><br>
+      <input type="file" id="json-file" accept=".json">
+      <small id="q-status"></small>
+    </div>
+    <p class="note">Har student se rotation me 2 questions puche jayein gay.</p>
+    <button class="btn" onclick="startClassQuiz()">Start Class Quiz Session</button>
+  </div>
+
+  <div id="quiz-screen" class="hidden">
+    <div class="meta"><span id="round-indicator"></span><span id="student-progress"></span></div>
+    <div class="path" id="path"></div>
+    <div class="student" id="current-student-display"></div>
+    <div class="qbox">
+      <div id="question-text"></div>
+      <div class="options" id="options-container"></div>
+      <div class="hint" id="question-hint"></div>
+    </div>
+    <button class="btn" id="main-btn" onclick="submitStudentAnswer()">Submit Answer</button>
+  </div>
+
+  <div id="complete-screen" class="hidden">
+    <h2>Class Quiz Session Completed!</h2>
+    <p style="color:var(--muted);margin:0">Sabhi students ke marks successfully record ho chukay hain.</p>
+    <div class="stats">
+      <div class="stat" style="--i:1"><strong id="st-total">0</strong><span>Correct answers</span></div>
+      <div class="stat" style="--i:2"><strong id="st-acc">0%</strong><span>Class accuracy</span></div>
+      <div class="stat" style="--i:3"><strong id="st-perfect">0</strong><span>Students 2/2</span></div>
+    </div>
+    <button class="btn green" onclick="downloadClassExcel()" style="margin-top:20px">Download Updated Class Excel Sheet</button>
+  </div>
+</div>
+
+<script>
+const students = [{"Reg No": 24108118, "Name": "Muhammad  Haram"}, {"Reg No": 24108184, "Name": "Suleman  Sajid"}, {"Reg No": 24108199, "Name": "Ershan"}, {"Reg No": 24108200, "Name": "Ezaan"}, {"Reg No": 24108251, "Name": "Bhoomika  Bai"}, {"Reg No": 24108284, "Name": "Zohaib  Ali"}, {"Reg No": 24108285, "Name": "Alishba  Kashif"}, {"Reg No": 24108291, "Name": "Saeedullah"}, {"Reg No": 25108107, "Name": "Ammar  Ahsan"}, {"Reg No": 25108120, "Name": "Muhammad Ali Siddiqui"}, {"Reg No": 25108123, "Name": "Muhammad Muneeb Ul Haq"}, {"Reg No": 25108145, "Name": "Abdul Kabeer  Khatri"}, {"Reg No": 25108146, "Name": "Abdul Rafay Shaikh Muhammad Ismail"}, {"Reg No": 25108147, "Name": "Aroosa Pervez"}, {"Reg No": 25108148, "Name": "Asif  Sohail"}, {"Reg No": 25108149, "Name": "Awais  Ali"}, {"Reg No": 25108150, "Name": "Ayesha  Rehman"}, {"Reg No": 25108153, "Name": "Danya  Saqib"}, {"Reg No": 25108154, "Name": "Hafsa  Imran"}, {"Reg No": 25108155, "Name": "Hammad  Hussain"}, {"Reg No": 25108156, "Name": "Hasham  Magsi"}, {"Reg No": 25108159, "Name": "Kamil  Karim"}, {"Reg No": 25108163, "Name": "Muhammad Hashir Vesir"}, {"Reg No": 25108164, "Name": "Muhammad Hassan  Raza"}, {"Reg No": 25108165, "Name": "Muhammad  Ibrahim"}, {"Reg No": 25108166, "Name": "Muhammad  Irtaza"}, {"Reg No": 25108167, "Name": "Muhammad  Shahbaz"}, {"Reg No": 25108168, "Name": "Muhammad  Usman"}, {"Reg No": 25108169, "Name": "Muskan Kumari Vanesh Kumar"}, {"Reg No": 25108171, "Name": "Omar  Siddiqui"}, {"Reg No": 25108172, "Name": "Prachi Inder Kachella"}, {"Reg No": 25108175, "Name": "Sanjana  Goreja"}, {"Reg No": 25108178, "Name": "Sarim  Saleem"}, {"Reg No": 25108182, "Name": "Suneina"}, {"Reg No": 25108183, "Name": "Syed Mir Muhammad Shah"}, {"Reg No": 25108184, "Name": "Syed Rahim Abbas Naqvi"}, {"Reg No": 25108188, "Name": "Zeeshan  Ali"}, {"Reg No": 25108240, "Name": "Areeba  Usman"}];
+const jsonQuestions = [{"id": 1, "question": "What does AI stand for?", "options": ["A) Artificial Intelligence", "B) Alien Invasion"], "correct_answer": 0, "hint": "AI = Artificial Intelligence."}, {"id": 2, "question": "Which data structure does BFS use?", "options": ["A) Queue", "B) Magic Wand"], "correct_answer": 0, "hint": "BFS uses a FIFO queue."}, {"id": 3, "question": "Which data structure does DFS use?", "options": ["A) Stack", "B) Basket of Oranges"], "correct_answer": 0, "hint": "DFS uses a LIFO stack."}, {"id": 4, "question": "What is the A* evaluation function?", "options": ["A) f(n) = g(n) + h(n)", "B) f(n) = pizza + burger"], "correct_answer": 0, "hint": "A* adds g(n) and h(n)."}, {"id": 5, "question": "Which keyword defines a function in Python?", "options": ["A) def", "B) potato"], "correct_answer": 0, "hint": "Python uses 'def'."}, {"id": 6, "question": "Which language is used in this AI lab?", "options": ["A) Python", "B) Klingon"], "correct_answer": 0, "hint": "The lab uses Python."}, {"id": 7, "question": "What does ML stand for?", "options": ["A) Machine Learning", "B) Monkey Language"], "correct_answer": 0, "hint": "ML = Machine Learning."}, {"id": 8, "question": "BFS explores the graph how?", "options": ["A) Level by level", "B) By magic"], "correct_answer": 0, "hint": "BFS goes level by level."}, {"id": 9, "question": "DFS explores the graph how?", "options": ["A) Deep first, then backtrack", "B) By teleporting"], "correct_answer": 0, "hint": "DFS goes deep, then backtracks."}, {"id": 10, "question": "A* search uses what to guide it?", "options": ["A) A heuristic", "B) A crystal ball"], "correct_answer": 0, "hint": "A* uses a heuristic h(n)."}, {"id": 11, "question": "Which Python type is a list?", "options": ["A) [1, 2, 3]", "B) {a bowl of rice}"], "correct_answer": 0, "hint": "Lists use square brackets."}, {"id": 12, "question": "What is the Turing Test about?", "options": ["A) Machine intelligence", "B) Testing a toaster"], "correct_answer": 0, "hint": "It tests machine intelligence."}, {"id": 13, "question": "BFS finds shortest path in which graphs?", "options": ["A) Unweighted graphs", "B) Only in space"], "correct_answer": 0, "hint": "BFS works for unweighted graphs."}, {"id": 14, "question": "What is backtracking?", "options": ["A) Going back when stuck", "B) Eating a snack"], "correct_answer": 0, "hint": "Go back when no path remains."}, {"id": 15, "question": "Which heuristic is used in grid search?", "options": ["A) Manhattan distance", "B) Number of stars"], "correct_answer": 0, "hint": "Manhattan distance is common."}, {"id": 16, "question": "How do you loop over a list in Python?", "options": ["A) for x in items:", "B) loop like a boss:"], "correct_answer": 0, "hint": "Use 'for x in items:'."}, {"id": 17, "question": "Which AI field learns from data?", "options": ["A) Machine Learning", "B) Cooking"], "correct_answer": 0, "hint": "Machine Learning learns from data."}, {"id": 18, "question": "Which operation adds to a queue?", "options": ["A) enqueue", "B) enchant"], "correct_answer": 0, "hint": "enqueue adds to a queue."}, {"id": 19, "question": "Recursion uses which structure?", "options": ["A) Call stack", "B) A ladder"], "correct_answer": 0, "hint": "Recursion uses the call stack."}, {"id": 20, "question": "What is g(n) in A*?", "options": ["A) Cost from start to n", "B) Cost of a burger"], "correct_answer": 0, "hint": "g(n) = cost so far."}, {"id": 21, "question": "Which function gives list length in Python?", "options": ["A) len()", "B) lengthy()"], "correct_answer": 0, "hint": "Use len()."}, {"id": 22, "question": "What is a state space?", "options": ["A) All possible states", "B) Outer space"], "correct_answer": 0, "hint": "All reachable states."}, {"id": 23, "question": "Which search uses a priority queue by f(n)?", "options": ["A) A* Search", "B) Duck Search"], "correct_answer": 0, "hint": "A* uses a priority queue."}, {"id": 24, "question": "Main drawback of DFS?", "options": ["A) Not always shortest path", "B) It is too slow to spell"], "correct_answer": 0, "hint": "DFS may not find shortest path."}, {"id": 25, "question": "If h(n)=0, A* becomes?", "options": ["A) Uniform Cost Search", "B) A magic trick"], "correct_answer": 0, "hint": "h=0 means uniform cost search."}, {"id": 26, "question": "Which handles errors in Python?", "options": ["A) try/except", "B) pray/except"], "correct_answer": 0, "hint": "try/except handles errors."}, {"id": 27, "question": "What is an agent?", "options": ["A) Something that perceives and acts", "B) A secret spy only"], "correct_answer": 0, "hint": "Perceives and acts."}, {"id": 28, "question": "BFS order is?", "options": ["A) Level by level", "B) Randomly"], "correct_answer": 0, "hint": "BFS is level order."}, {"id": 29, "question": "DFS avoids repeats using?", "options": ["A) Visited set", "B) Good luck"], "correct_answer": 0, "hint": "Use a visited set."}, {"id": 30, "question": "Greedy search uses?", "options": ["A) h(n) only", "B) g(n) only"], "correct_answer": 0, "hint": "Greedy uses only h(n)."}, {"id": 31, "question": "Which keyword makes a small function in Python?", "options": ["A) lambda", "B) potato"], "correct_answer": 0, "hint": "lambda makes anonymous functions."}, {"id": 32, "question": "PEAS stands for?", "options": ["A) Performance, Environment, Actuators, Sensors", "B) Peas, Eggs, Apples, Sugar"], "correct_answer": 0, "hint": "PEAS = Performance, Environment, Actuators, Sensors."}, {"id": 33, "question": "BFS memory is roughly?", "options": ["A) O(b^d)", "B) O(1)"], "correct_answer": 0, "hint": "BFS memory is exponential."}, {"id": 34, "question": "DFS memory is roughly?", "options": ["A) O(b*m)", "B) O(infinity)"], "correct_answer": 0, "hint": "DFS uses linear memory."}, {"id": 35, "question": "A consistent heuristic is also?", "options": ["A) Admissible", "B) Delicious"], "correct_answer": 0, "hint": "Consistent implies admissible."}, {"id": 36, "question": "How to define a class in Python?", "options": ["A) class Name:", "B) classy Name:"], "correct_answer": 0, "hint": "Use 'class Name:'."}, {"id": 37, "question": "Which search is uninformed?", "options": ["A) BFS", "B) A*"], "correct_answer": 0, "hint": "BFS is uninformed."}, {"id": 38, "question": "What is branching factor b?", "options": ["A) Children per node", "B) Trees in a forest"], "correct_answer": 0, "hint": "Children per node."}, {"id": 39, "question": "Which goes deep first?", "options": ["A) DFS", "B) BFS"], "correct_answer": 0, "hint": "DFS goes deep first."}, {"id": 40, "question": "A* is optimal if h is?", "options": ["A) Admissible", "B) Random"], "correct_answer": 0, "hint": "Admissible heuristic = optimal."}, {"id": 41, "question": "Which Python type stores key-value?", "options": ["A) dict", "B) list"], "correct_answer": 0, "hint": "dict stores key-value pairs."}, {"id": 42, "question": "Search algorithms try to find?", "options": ["A) A path to the goal", "B) A good movie"], "correct_answer": 0, "hint": "A path to the goal."}, {"id": 43, "question": "BFS is complete if?", "options": ["A) Branching is finite", "B) The graph is infinite only"], "correct_answer": 0, "hint": "Finite branching = complete."}, {"id": 44, "question": "DFS is optimal?", "options": ["A) Not in general", "B) Always"], "correct_answer": 0, "hint": "DFS is not optimal."}, {"id": 45, "question": "f(start) in A* equals?", "options": ["A) h(start)", "B) 100"], "correct_answer": 0, "hint": "g(start)=0, so f=h."}, {"id": 46, "question": "Which list method adds to the end?", "options": ["A) append()", "B) add()"], "correct_answer": 0, "hint": "append() adds to end."}, {"id": 47, "question": "Admissible heuristic means?", "options": ["A) Never overestimates", "B) Always overestimates"], "correct_answer": 0, "hint": "Never overestimates."}, {"id": 48, "question": "O(1) lookup by key uses?", "options": ["A) Hash table", "B) A phone book"], "correct_answer": 0, "hint": "Hash tables give O(1) lookup."}, {"id": 49, "question": "Iterative deepening combines?", "options": ["A) DFS memory + BFS completeness", "B) BFS memory + DFS speed"], "correct_answer": 0, "hint": "DFS memory, BFS completeness."}, {"id": 50, "question": "A* stops when?", "options": ["A) Goal is expanded", "B) The sun sets"], "correct_answer": 0, "hint": "Stop when goal is expanded."}, {"id": 51, "question": "How to inherit in Python?", "options": ["A) class Child(Parent):", "B) inherits Child from Parent"], "correct_answer": 0, "hint": "Put parent in parentheses."}, {"id": 52, "question": "Goal test checks?", "options": ["A) If state is a goal", "B) If state is tasty"], "correct_answer": 0, "hint": "Checks if the state is a goal."}, {"id": 53, "question": "BFS on cyclic graph needs?", "options": ["A) Visited set", "B) Nothing"], "correct_answer": 0, "hint": "Use a visited set."}, {"id": 54, "question": "Depth-limited search does what?", "options": ["A) Limits recursion depth", "B) Limits pizza size"], "correct_answer": 0, "hint": "Limits depth."}, {"id": 55, "question": "Weighted graphs use?", "options": ["A) Dijkstra/A*", "B) Plain BFS only"], "correct_answer": 0, "hint": "Use Dijkstra or A*."}, {"id": 56, "question": "How to write a comment in Python?", "options": ["A) # comment", "B) // comment"], "correct_answer": 0, "hint": "Use #."}, {"id": 57, "question": "Machine learning is?", "options": ["A) Learning from data", "B) Learning to fly"], "correct_answer": 0, "hint": "Learn from data."}, {"id": 58, "question": "Which removes front of queue?", "options": ["A) dequeue", "B) enqueue"], "correct_answer": 0, "hint": "dequeue removes front."}, {"id": 59, "question": "DFS order is?", "options": ["A) LIFO", "B) FIFO"], "correct_answer": 0, "hint": "DFS is LIFO."}, {"id": 60, "question": "A* advantage over BFS?", "options": ["A) Uses a heuristic", "B) Uses a wand"], "correct_answer": 0, "hint": "A* uses heuristic."}, {"id": 61, "question": "Which converts string to int?", "options": ["A) int()", "B) str()"], "correct_answer": 0, "hint": "int() converts to integer."}, {"id": 62, "question": "Supervised learning uses?", "options": ["A) Labeled data", "B) No data"], "correct_answer": 0, "hint": "Uses labeled data."}, {"id": 63, "question": "BFS shortest path when?", "options": ["A) Edge costs are equal", "B) Edge costs are random"], "correct_answer": 0, "hint": "Equal edge costs."}, {"id": 64, "question": "DFS is used for?", "options": ["A) Cycle detection", "B) Cooking pasta"], "correct_answer": 0, "hint": "DFS detects cycles."}, {"id": 65, "question": "Closed set in A* stores?", "options": ["A) Expanded nodes", "B) Closed doors"], "correct_answer": 0, "hint": "Stores expanded nodes."}, {"id": 66, "question": "Which checks equality in Python?", "options": ["A) ==", "B) ="], "correct_answer": 0, "hint": "== checks equality."}, {"id": 67, "question": "Reinforcement learning uses?", "options": ["A) Rewards", "B) Magic spells"], "correct_answer": 0, "hint": "RL uses rewards."}, {"id": 68, "question": "BFS explores by?", "options": ["A) Increasing depth", "B) Decreasing depth"], "correct_answer": 0, "hint": "Increasing depth."}, {"id": 69, "question": "Iterative DFS uses?", "options": ["A) Stack", "B) Queue"], "correct_answer": 0, "hint": "Uses a stack."}, {"id": 70, "question": "Admissible h gives A*?", "options": ["A) Optimal path", "B) Fastest typing speed"], "correct_answer": 0, "hint": "Admissible h gives optimal path."}, {"id": 71, "question": "Which module has sqrt?", "options": ["A) math", "B) magic"], "correct_answer": 0, "hint": "Use the math module."}, {"id": 72, "question": "AI vs ML?", "options": ["A) ML is a subset of AI", "B) They are unrelated"], "correct_answer": 0, "hint": "ML is a subset of AI."}, {"id": 73, "question": "BFS frontier stores?", "options": ["A) Discovered, unexpanded nodes", "B) Only goal nodes"], "correct_answer": 0, "hint": "Discovered, unexpanded nodes."}, {"id": 74, "question": "DFS can loop forever if?", "options": ["A) No visited set", "B) The graph is small"], "correct_answer": 0, "hint": "Loops without visited set."}, {"id": 75, "question": "Consistent heuristic is?", "options": ["A) Admissible", "B) Not admissible"], "correct_answer": 0, "hint": "Consistent implies admissible."}, {"id": 76, "question": "Which exits a loop in Python?", "options": ["A) break", "B) continue"], "correct_answer": 0, "hint": "break exits the loop."}, {"id": 77, "question": "Game AI uses?", "options": ["A) Minimax", "B) Bubble sort"], "correct_answer": 0, "hint": "Minimax for games."}, {"id": 78, "question": "BFS time is?", "options": ["A) O(b^d)", "B) O(1)"], "correct_answer": 0, "hint": "BFS time is O(b^d)."}, {"id": 79, "question": "SCC finding uses?", "options": ["A) DFS", "B) BFS only"], "correct_answer": 0, "hint": "Tarjan uses DFS."}, {"id": 80, "question": "Overestimating h causes?", "options": ["A) Suboptimal path", "B) Perfect path"], "correct_answer": 0, "hint": "Overestimating breaks optimality."}, {"id": 81, "question": "List comprehension syntax?", "options": ["A) [x for x in items]", "B) list x for items"], "correct_answer": 0, "hint": "[x for x in items]."}, {"id": 82, "question": "Frame problem is about?", "options": ["A) What does not change", "B) Picture frames"], "correct_answer": 0, "hint": "What does not change."}, {"id": 83, "question": "In BFS, mark visited when?", "options": ["A) When enqueued", "B) After all work is done"], "correct_answer": 0, "hint": "Mark when enqueued."}, {"id": 84, "question": "Which uses recursion naturally?", "options": ["A) DFS", "B) BFS"], "correct_answer": 0, "hint": "DFS uses recursion."}, {"id": 85, "question": "A* open list is a?", "options": ["A) Priority queue", "B) Stack of pancakes"], "correct_answer": 0, "hint": "Min-heap priority queue."}, {"id": 86, "question": "Which removes last list item?", "options": ["A) pop()", "B) push()"], "correct_answer": 0, "hint": "pop() removes last item."}, {"id": 87, "question": "NLP deals with?", "options": ["A) Human language", "B) Computer hardware"], "correct_answer": 0, "hint": "NLP = human language."}, {"id": 88, "question": "BFS on weighted graphs?", "options": ["A) Not optimal", "B) Always optimal"], "correct_answer": 0, "hint": "BFS is not optimal for weights."}, {"id": 89, "question": "Memoization means?", "options": ["A) Caching results", "B) Memorizing songs"], "correct_answer": 0, "hint": "Caching subproblem results."}, {"id": 90, "question": "A* vs Dijkstra?", "options": ["A) A* adds h(n)", "B) They are identical"], "correct_answer": 0, "hint": "A* adds a heuristic."}, {"id": 91, "question": "Which is conditional in Python?", "options": ["A) if", "B) when"], "correct_answer": 0, "hint": "Use if."}, {"id": 92, "question": "Expert system uses?", "options": ["A) Rules", "B) Spells"], "correct_answer": 0, "hint": "Rule-based knowledge."}, {"id": 93, "question": "Weighted shortest path uses?", "options": ["A) Uniform Cost Search", "B) Plain BFS"], "correct_answer": 0, "hint": "UCS/Dijkstra for weights."}, {"id": 94, "question": "DFS detects?", "options": ["A) Cycles", "B) The future"], "correct_answer": 0, "hint": "DFS detects cycles."}, {"id": 95, "question": "Inadmissible h makes A*?", "options": ["A) Not optimal", "B) Always optimal"], "correct_answer": 0, "hint": "Inadmissible = not optimal."}, {"id": 96, "question": "Which makes a number range?", "options": ["A) range()", "B) seq()"], "correct_answer": 0, "hint": "range() makes ranges."}, {"id": 97, "question": "Alpha-beta pruning does?", "options": ["A) Prunes minimax branches", "B) Grows trees"], "correct_answer": 0, "hint": "Prunes branches in minimax."}, {"id": 98, "question": "BFS frontier is a?", "options": ["A) Queue", "B) Stack"], "correct_answer": 0, "hint": "BFS uses a queue."}, {"id": 99, "question": "DFS base case is?", "options": ["A) No unvisited neighbors/goal", "B) The root always"], "correct_answer": 0, "hint": "Stop at goal or no neighbors."}, {"id": 100, "question": "Worst-case A* time?", "options": ["A) Exponential", "B) O(1)"], "correct_answer": 0, "hint": "Worst case is exponential."}, {"id": 101, "question": "Which defines a generator?", "options": ["A) yield", "B) return"], "correct_answer": 0, "hint": "yield defines a generator."}, {"id": 102, "question": "Chinese Room is about?", "options": ["A) Machine understanding", "B) Room temperature"], "correct_answer": 0, "hint": "It questions machine understanding."}, {"id": 103, "question": "BFS on unweighted graphs gives?", "options": ["A) Minimum edges to goal", "B) Maximum weight"], "correct_answer": 0, "hint": "Minimum edges (hops)."}, {"id": 104, "question": "Maze solving with one full path uses?", "options": ["A) DFS", "B) BFS"], "correct_answer": 0, "hint": "DFS explores one path fully."}, {"id": 105, "question": "h(n)=0 in A* gives?", "options": ["A) Uniform Cost Search", "B) Greedy search"], "correct_answer": 0, "hint": "h=0 → UCS."}, {"id": 106, "question": "Which joins strings in Python?", "options": ["A) join()", "B) glue()"], "correct_answer": 0, "hint": "Use join()."}, {"id": 107, "question": "Overfitting means?", "options": ["A) Fits training too closely", "B) Fits perfectly always"], "correct_answer": 0, "hint": "Fits training too closely."}, {"id": 108, "question": "BFS is optimal when costs are?", "options": ["A) Equal", "B) Negative"], "correct_answer": 0, "hint": "Equal/unit edge costs."}, {"id": 109, "question": "DFS space is?", "options": ["A) O(b*m)", "B) O(b^d)"], "correct_answer": 0, "hint": "DFS space is linear."}, {"id": 110, "question": "Admissible 8-puzzle heuristic?", "options": ["A) Misplaced tiles", "B) Moves made so far"], "correct_answer": 0, "hint": "Misplaced tiles is admissible."}, {"id": 111, "question": "Which is mutable in Python?", "options": ["A) list", "B) tuple"], "correct_answer": 0, "hint": "Lists are mutable."}, {"id": 112, "question": "Rational agent acts to?", "options": ["A) Maximize performance", "B) Act randomly"], "correct_answer": 0, "hint": "Maximize expected performance."}, {"id": 113, "question": "BFS order is?", "options": ["A) FIFO", "B) LIFO"], "correct_answer": 0, "hint": "BFS is FIFO."}, {"id": 114, "question": "Iterative DFS uses?", "options": ["A) Explicit stack", "B) Priority queue"], "correct_answer": 0, "hint": "Explicit stack simulates recursion."}, {"id": 115, "question": "A* main cost is?", "options": ["A) Memory", "B) Sorting input"], "correct_answer": 0, "hint": "A* uses lots of memory."}, {"id": 116, "question": "Which opens a file to read?", "options": ["A) open('f.txt','r')", "B) read('f.txt')"], "correct_answer": 0, "hint": "open with 'r' reads."}, {"id": 117, "question": "Decision tree does?", "options": ["A) Splits data by features", "B) Searches graphs"], "correct_answer": 0, "hint": "Splits data by features."}, {"id": 118, "question": "Efficient BFS uses?", "options": ["A) collections.deque", "B) A magic box"], "correct_answer": 0, "hint": "deque gives O(1) popleft."}, {"id": 119, "question": "Graph search differs by?", "options": ["A) Tracking visited nodes", "B) Being identical"], "correct_answer": 0, "hint": "Graph search tracks visited."}, {"id": 120, "question": "Weighted A* does?", "options": ["A) Trades optimality for speed", "B) Always optimal"], "correct_answer": 0, "hint": "Weighted A* is faster, not optimal."}, {"id": 121, "question": "Multiple exceptions use?", "options": ["A) except (TypeError, ValueError):", "B) catch all:"], "correct_answer": 0, "hint": "Use a tuple in except."}, {"id": 122, "question": "Cross-validation does?", "options": ["A) Estimates generalization", "B) Speeds typing"], "correct_answer": 0, "hint": "Estimates generalization."}, {"id": 123, "question": "BFS disadvantage is?", "options": ["A) High memory", "B) Cannot handle graphs"], "correct_answer": 0, "hint": "BFS uses high memory."}, {"id": 124, "question": "DFS with visited set is?", "options": ["A) Terminating", "B) Never terminating"], "correct_answer": 0, "hint": "It terminates on finite graphs."}, {"id": 125, "question": "Dijkstra vs A*?", "options": ["A) A* = Dijkstra + heuristic", "B) Unrelated"], "correct_answer": 0, "hint": "A* generalizes Dijkstra."}, {"id": 126, "question": "Default argument syntax?", "options": ["A) def f(x=0):", "B) def f(x:0):"], "correct_answer": 0, "hint": "Use = for defaults."}, {"id": 127, "question": "Regularization does?", "options": ["A) Reduces overfitting", "B) Increases overfitting"], "correct_answer": 0, "hint": "Regularization reduces overfitting."}, {"id": 128, "question": "BFS finds?", "options": ["A) Shortest path (unweighted)", "B) Longest path"], "correct_answer": 0, "hint": "Shortest path in unweighted graphs."}, {"id": 129, "question": "DFS visit order is?", "options": ["A) Pre-order", "B) Level-order"], "correct_answer": 0, "hint": "DFS visits node before descendants."}, {"id": 130, "question": "IDA* advantage?", "options": ["A) Low memory + optimality", "B) No heuristic"], "correct_answer": 0, "hint": "Low memory with A* optimality."}, {"id": 131, "question": "In-place list sort uses?", "options": ["A) list.sort()", "B) sorted() only"], "correct_answer": 0, "hint": "list.sort() sorts in place."}, {"id": 132, "question": "Neural network is?", "options": ["A) Weighted layers trained on data", "B) A search algorithm"], "correct_answer": 0, "hint": "Layers of weighted units."}, {"id": 133, "question": "BFS relies on?", "options": ["A) FIFO", "B) LIFO"], "correct_answer": 0, "hint": "BFS uses FIFO."}, {"id": 134, "question": "DFS worst-case time?", "options": ["A) O(b^m)", "B) O(log n)"], "correct_answer": 0, "hint": "DFS worst case is O(b^m)."}, {"id": 135, "question": "Consistent 8-puzzle heuristic?", "options": ["A) Manhattan distance", "B) Nodes expanded"], "correct_answer": 0, "hint": "Manhattan is consistent."}, {"id": 136, "question": "Power operator in Python?", "options": ["A) **", "B) ^"], "correct_answer": 0, "hint": "** is exponentiation."}, {"id": 137, "question": "Clustering is?", "options": ["A) Grouping similar data", "B) Predicting labels"], "correct_answer": 0, "hint": "Unsupervised grouping."}, {"id": 138, "question": "BFS expands which next?", "options": ["A) Oldest node", "B) Newest node"], "correct_answer": 0, "hint": "Oldest node (FIFO)."}, {"id": 139, "question": "DFS is good for?", "options": ["A) Maze path finding", "B) Bubble sort"], "correct_answer": 0, "hint": "Maze path finding."}, {"id": 140, "question": "Heuristic in A* does?", "options": ["A) Guides the search", "B) Slows the CPU"], "correct_answer": 0, "hint": "Heuristic guides the search."}, {"id": 141, "question": "Which Python loop runs while a condition is true?", "options": ["A) while", "B) until"], "correct_answer": 0, "hint": "Python uses while."}, {"id": 142, "question": "An admissible heuristic is?", "options": ["A) Never overestimating", "B) Always overestimating"], "correct_answer": 0, "hint": "Never overestimates."}, {"id": 143, "question": "BFS visited marking prevents?", "options": ["A) Repeats/loops", "B) Fast search"], "correct_answer": 0, "hint": "Prevents repeats and loops."}, {"id": 144, "question": "DFS is not optimal because?", "options": ["A) It may find a longer path first", "B) It is too fast"], "correct_answer": 0, "hint": "May find a longer path first."}, {"id": 145, "question": "A* returns optimal path if h is?", "options": ["A) Admissible", "B) Inadmissible"], "correct_answer": 0, "hint": "Admissible h = optimal."}, {"id": 146, "question": "Which Python type is immutable?", "options": ["A) tuple", "B) list"], "correct_answer": 0, "hint": "Tuples are immutable."}, {"id": 147, "question": "Learning with labels is?", "options": ["A) Supervised learning", "B) Sleeping"], "correct_answer": 0, "hint": "Supervised learning uses labels."}, {"id": 148, "question": "BFS expands nodes in?", "options": ["A) FIFO order", "B) Random order"], "correct_answer": 0, "hint": "FIFO order."}, {"id": 149, "question": "DFS uses which structure?", "options": ["A) Stack", "B) Queue"], "correct_answer": 0, "hint": "DFS uses a stack."}, {"id": 150, "question": "A* combines?", "options": ["A) g(n) + h(n)", "B) pizza + burger"], "correct_answer": 0, "hint": "f(n) = g(n) + h(n)."}];
+
+const ROUNDS = 2;
+let studentScores = {}, results = [[], []];
+students.forEach(s => studentScores[s['Reg No']] = 0);
+let currentStudentIndex = 0, currentRound = 1, uploadedWorkbook = null, pool = [], shuffledQuestions = [];
+let selected = null, locked = false, currentQ = null, hintShown = false;
+const $ = id => document.getElementById(id);
+
+/* ---- question pool: built-in + JSON file, placeholders removed, duplicates removed ---- */
+const strip = t => String(t).replace(/^\s*[A-Da-d]\)\s*/, '').trim();
+const isPlaceholder = x => /Question #\d+|fictional nonsense|Correct and valid definition/i.test(x.question + ' ' + (x.options || []).join(' '));
+function normalize(x){ return {q: x.question, opts: x.options.map(strip), ans: x.correct_answer, hint: x.hint || ''}; }
+function buildPool(extra){
+  const all = extra.filter(x => x.options && x.options.length >= 2 && !isPlaceholder(x)).map(normalize);
+  const seen = new Set();
+  pool = all.filter(x => { const k = x.q.toLowerCase().replace(/\W+/g, ' ').trim(); if (seen.has(k)) return false; seen.add(k); return true; });
+  shuffledQuestions = [...pool].sort(() => 0.5 - Math.random());
+  $('q-status').textContent = pool.length + ' questions ready.';
+}
+let extraQuestions = jsonQuestions.slice();
+
+window.onload = function(){
+  buildPool(extraQuestions);
+  $('excel-file').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => { uploadedWorkbook = XLSX.read(new Uint8Array(ev.target.result), {type: 'array'});
+      $('file-status').textContent = 'Uploaded: ' + file.name; $('file-status').className = 'ok'; };
+    r.readAsArrayBuffer(file);
+  });
+  $('json-file').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => { try { const d = JSON.parse(ev.target.result); extraQuestions = extraQuestions.concat(Array.isArray(d) ? d : []); const before = pool.length; buildPool(extraQuestions);
+        $('q-status').textContent = (pool.length - before) + ' new questions added, ' + pool.length + ' total (duplicates skipped).'; }
+      catch(err){ $('q-status').textContent = 'Invalid JSON file.'; } };
+    r.readAsText(file);
+  });
+  document.addEventListener('keydown', e => {
+    if ($('quiz-screen').classList.contains('hidden')) return;
+    const k = e.key.toLowerCase();
+    if ((k === 'a' || k === '1') && !locked) pick(0); else if ((k === 'b' || k === '2') && !locked) pick(1);
+    else if (k === 'enter') submitStudentAnswer();
+  });
+  initFx();
+};
+
+function replay(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+function startClassQuiz(){
+  if (!uploadedWorkbook){ replay($('file-status'), 'shake'); $('file-status').textContent = 'Pehlay apni Class ki Excel file (BSAI 3B.xlsx) select/upload karen!'; $('file-status').className = 'err'; return; }
+  $('start-screen').classList.add('hidden'); $('quiz-screen').classList.remove('hidden');
+  startMusic();
+  loadCurrentTurn();
+}
+
+/* background music: both songs loop one after another; started on click so the browser allows autoplay */
+let musicOn = true, musicFailed = false;
+function startMusic(){
+  const a = $('bg-audio'), btn = $('music-btn');
+  btn.classList.remove('hidden');
+  a.volume = 0.4;
+  a.addEventListener('error', musicError);
+  a.play().catch(e => { if (e.name !== 'NotAllowedError') musicError(); });
+}
+function musicError(){ musicFailed = true; const b = $('music-btn'); b.textContent = 'bgmusic.mp3 not found'; b.classList.add('off'); }
+function toggleMusic(){
+  if (musicFailed) return; const a = $('bg-audio'); musicOn = !musicOn;
+  musicOn ? a.play() : a.pause();
+  $('music-btn').innerHTML = '&#9835; Music ' + (musicOn ? 'on' : 'off'); $('music-btn').classList.toggle('off', !musicOn);
+}
+
+function drawPath(){
+  const p = $('path'); p.innerHTML = '';
+  students.forEach((s, i) => { const n = document.createElement('i'); n.className = 'node' + (results[currentRound-1][i] ? ' ' + results[currentRound-1][i] : '') + (i === currentStudentIndex ? ' now' : ''); n.title = s.Name; p.appendChild(n); });
+}
+
+function loadCurrentTurn(){
+  if (currentRound > ROUNDS){ finishClassQuiz(); return; }
+  const student = students[currentStudentIndex];
+  $('round-indicator').textContent = 'Round ' + currentRound + ' of ' + ROUNDS;
+  $('student-progress').textContent = 'Student ' + (currentStudentIndex + 1) + ' of ' + students.length;
+  const sd = $('current-student-display');
+  sd.innerHTML = '<small>Your turn</small>' + student['Reg No'] + ' - ' + student['Name'].replace(/\s+/g, ' ');
+  replay(sd, 'enter');
+
+  const q = shuffledQuestions[((currentRound - 1) * students.length + currentStudentIndex) % shuffledQuestions.length];
+  const flip = Math.random() < 0.5;                       /* correct answer is not always A */
+  currentQ = {opts: flip ? [q.opts[1], q.opts[0]] : q.opts, correct: flip ? 1 - q.ans : q.ans};
+  const qt = $('question-text'); qt.textContent = q.q; replay(qt, 'enter');
+  const box = $('options-container'); box.innerHTML = '';
+  currentQ.opts.forEach((t, i) => {
+    const b = document.createElement('button'); b.className = 'opt'; b.style.setProperty('--i', i);
+    b.innerHTML = '<b>' + 'AB'[i] + '</b><span></span>'; b.lastChild.textContent = t; b.onclick = () => pick(i); box.appendChild(b);
+  });
+  hintShown = false; selected = null; locked = false;
+  const h = $('question-hint'); h.className = 'hint'; h.innerHTML = '<button onclick="showHint()">Show hint</button>'; h._text = q.hint;
+  $('main-btn').textContent = 'Submit Answer';
+  drawPath();
+}
+
+function showHint(){ const h = $('question-hint'); h.textContent = 'Hint: ' + h._text; h.classList.add('show'); }
+
+function pick(i){
+  if (locked) return; selected = i;
+  [...$('options-container').children].forEach((b, j) => b.classList.toggle('sel', j === i));
+}
+
+function submitStudentAnswer(){
+  if (locked){ nextTurn(); return; }
+  if (selected === null){ replay($('main-btn'), 'shake'); return; }
+  locked = true;
+  const student = students[currentStudentIndex], ok = selected === currentQ.correct;
+  const opts = [...$('options-container').children]; opts.forEach(b => { b.disabled = true; b.classList.remove('sel'); });
+  opts[currentQ.correct].classList.add('right');
+  if (!ok) opts[selected].classList.add('wrong');
+  if (ok) studentScores[student['Reg No']] += 1;
+  results[currentRound - 1][currentStudentIndex] = ok ? 'good' : 'bad';
+  const r = opts[selected].getBoundingClientRect();
+  if (ok) burst(r.left + r.width / 2, r.top + r.height / 2, 60);
+  const snd = $(ok ? 'correct-audio' : 'wrong-audio'); if (snd){ snd.currentTime = 0; snd.play().catch(() => {}); }
+  drawPath(); $('main-btn').textContent = 'Next Student';
+}
+
+function nextTurn(){
+  currentStudentIndex++;
+  if (currentStudentIndex >= students.length){ currentStudentIndex = 0; currentRound++; }
+  loadCurrentTurn();
+}
+
+function countUp(id, to, suffix){
+  const el = $(id), t0 = performance.now();
+  (function f(t){ const k = Math.min(1, (t - t0) / 1200); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))) + (suffix || ''); if (k < 1) requestAnimationFrame(f); })(t0);
+}
+function finishClassQuiz(){
+  $('quiz-screen').classList.add('hidden'); $('complete-screen').classList.remove('hidden');
+  const total = Object.values(studentScores).reduce((a, b) => a + b, 0);
+  countUp('st-total', total); countUp('st-acc', Math.round(100 * total / (students.length * ROUNDS)), '%');
+  countUp('st-perfect', Object.values(studentScores).filter(v => v === ROUNDS).length);
+  for (let i = 0; i < 5; i++) setTimeout(() => burst(innerWidth * (0.15 + 0.7 * Math.random()), innerHeight * 0.35, 90), i * 350);
+}
+
+function downloadClassExcel(){
+  if (!uploadedWorkbook){ alert('Workbook missing!'); return; }
+  let ws = uploadedWorkbook.Sheets[uploadedWorkbook.SheetNames[0]];
+  let data = XLSX.utils.sheet_to_json(ws);
+  data.forEach(row => {
+    let reg = String(row['Reg No']).trim();
+    Object.keys(studentScores).forEach(studentReg => {
+      if (reg === String(studentReg).trim()){ let marks = studentScores[studentReg]; row['Quiz 1'] = marks; row['Quiz Total'] = marks; }
+    });
+  });
+  uploadedWorkbook.Sheets[uploadedWorkbook.SheetNames[0]] = XLSX.utils.json_to_sheet(data);
+  XLSX.writeFile(uploadedWorkbook, 'BSAI3B.xlsx');
+}
+
+/* ---- background graph + confetti ---- */
+let cv, cx, nodes = [], bits = [];
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function initFx(){
+  cv = $('fx'); cx = cv.getContext('2d');
+  const size = () => { cv.width = innerWidth; cv.height = innerHeight; }; size(); addEventListener('resize', size);
+  nodes = Array.from({length: 34}, () => ({x: Math.random() * innerWidth, y: Math.random() * innerHeight, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35}));
+  if (!still) requestAnimationFrame(frame);
+}
+function burst(x, y, n){
+  if (still) return;
+  const cols = ['#ffb547', '#3fe0a0', '#7cc4ff', '#ff7a9c', '#ffffff'];
+  for (let i = 0; i < n; i++){ const a = Math.random() * 6.283, s = 3 + Math.random() * 7;
+    bits.push({x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, r: 3 + Math.random() * 4, c: cols[i % 5], life: 1, rot: Math.random() * 6}); }
+}
+function frame(){
+  cx.clearRect(0, 0, cv.width, cv.height);
+  nodes.forEach(n => { n.x += n.vx; n.y += n.vy; if (n.x < 0 || n.x > cv.width) n.vx *= -1; if (n.y < 0 || n.y > cv.height) n.vy *= -1; });
+  for (let i = 0; i < nodes.length; i++){
+    for (let j = i + 1; j < nodes.length; j++){ const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
+      if (d < 170){ cx.strokeStyle = 'rgba(124,196,255,' + (0.22 * (1 - d / 170)) + ')'; cx.beginPath(); cx.moveTo(nodes[i].x, nodes[i].y); cx.lineTo(nodes[j].x, nodes[j].y); cx.stroke(); } }
+    cx.fillStyle = 'rgba(255,181,71,.55)'; cx.beginPath(); cx.arc(nodes[i].x, nodes[i].y, 2.2, 0, 6.283); cx.fill();
+  }
+  bits = bits.filter(b => b.life > 0);
+  bits.forEach(b => { b.x += b.vx; b.y += b.vy; b.vy += .28; b.vx *= .985; b.life -= .014; b.rot += .2;
+    cx.save(); cx.globalAlpha = Math.max(b.life, 0); cx.translate(b.x, b.y); cx.rotate(b.rot); cx.fillStyle = b.c; cx.fillRect(-b.r, -b.r / 2, b.r * 2, b.r); cx.restore(); });
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
