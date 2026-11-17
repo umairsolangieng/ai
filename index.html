@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SZABIST BS(AI) - AI Lab Quiz Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-border: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --primary-border: #bfdbfe;
+  --success: #059669;
+  --success-light: #ecfdf5;
+  --success-border: #a7f3d0;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --danger-border: #fecaca;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --amber-border: #fde68a;
+  --radius: 16px;
+  --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg);
+  background-image: radial-gradient(at 0% 0%, #e0e7ff 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, #f1f5f9 0px, transparent 50%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 14px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+#fx {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Master Layout */
+.portal-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 820px;
+  transition: max-width 0.3s ease;
+}
+
+.portal-container.split-mode {
+  max-width: 1360px;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.split-mode .main-layout {
+  grid-template-columns: 1.15fr 0.95fr;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 30px 34px;
+}
+
+/* Header */
+.portal-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.badge-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: var(--text-muted);
+}
+.badge.primary {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+}
+.badge.status {
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.toggle-sheet-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--primary-border);
+  background: var(--primary-light);
+  color: var(--primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+.toggle-sheet-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+.toggle-sheet-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+h1 {
+  font-size: clamp(22px, 3.6vw, 26px);
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* AI Status Strip */
+.ai-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 18px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #334155;
+}
+.ai-strip-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auto-save-pill {
+  font-size: 11px;
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* Upload zone */
+.upload-card {
+  border: 1.5px dashed #cbd5e1;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  margin-bottom: 14px;
+  transition: all 0.2s;
+}
+.upload-card:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.upload-card label {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.upload-card input[type="file"] {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.status-msg {
+  display: block;
+  font-size: 12px;
+  margin-top: 6px;
+  color: var(--text-muted);
+}
+.status-msg.ok { color: var(--success); font-weight: 600; }
+.status-msg.err { color: var(--danger); font-weight: 600; }
+
+.info-banner {
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-align: center;
+  margin: 16px 0;
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--primary);
+  color: #ffffff;
+  transition: background 0.15s, transform 0.1s;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+.btn:hover { background: var(--primary-hover); }
+.btn:active { transform: scale(0.99); }
+
+.btn.secondary {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  margin-top: 10px;
+}
+.btn.secondary:hover { background: #e2e8f0; }
+
+.btn.success { background: var(--success); }
+.btn.success:hover { background: #047857; }
+
+/* Quiz Screen */
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.streak-pill {
+  background: var(--amber-light);
+  border: 1px solid var(--amber-border);
+  color: var(--amber);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Timer */
+.timer-track {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.timer-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--primary);
+  transition: width 1s linear, background 0.3s;
+}
+.timer-bar.warning { background: var(--amber); }
+.timer-bar.danger { background: var(--danger); }
+
+/* Progress Nodes */
+.nodes-matrix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.node {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: all 0.2s;
+}
+.node.good { background: var(--success); }
+.node.bad { background: var(--danger); }
+.node.absent { background: #94a3b8; }
+.node.now {
+  background: var(--primary);
+  transform: scale(1.35);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+/* Candidate Card */
+.candidate-box {
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  text-align: center;
+  margin-bottom: 18px;
+}
+.candidate-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+.candidate-name {
+  font-size: clamp(19px, 3.2vw, 22px);
+  font-weight: 800;
+  color: #1e3a8a;
+}
+.candidate-reg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #3b82f6;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+/* Question Area */
+.qbox { margin-bottom: 16px; }
+#question-text {
+  font-size: clamp(16px, 2.6vw, 19px);
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+/* Options */
+.options-grid {
+  display: grid;
+  gap: 10px;
+}
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid var(--surface-border);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.opt b {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.opt:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.opt.sel {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.opt.sel b {
+  background: var(--primary);
+  color: #ffffff;
+}
+.opt.right {
+  border-color: var(--success) !important;
+  background: var(--success-light) !important;
+  color: #064e3b !important;
+}
+.opt.right b {
+  background: var(--success);
+  color: #ffffff;
+}
+.opt.wrong {
+  border-color: var(--danger) !important;
+  background: var(--danger-light) !important;
+  color: #7f1d1d !important;
+}
+.opt.wrong b {
+  background: var(--danger);
+  color: #ffffff;
+}
+.opt:disabled { cursor: default; }
+
+/* Hint */
+.hint-row {
+  margin-top: 10px;
+  font-size: 13px;
+  min-height: 20px;
+}
+.hint-toggle {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.hint-content {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+/* Action Row */
+.action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.btn-skip {
+  flex: 0 0 130px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: var(--text-muted);
+}
+.btn-skip:hover {
+  background: var(--danger-light);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+/* Shortcuts Footer */
+.shortcuts-row {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.shortcuts-row kbd {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #334155;
+  font-weight: 600;
+}
+
+/* ==================== LIVE EXCEL SHEET PANEL ==================== */
+.live-sheet-panel {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 620px;
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sheet-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-metrics {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.metric-tag {
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.metric-tag b { color: var(--primary); }
+
+.sheet-search {
+  margin-bottom: 12px;
+}
+.sheet-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.sheet-search input:focus {
+  border-color: var(--primary);
+}
+
+.table-wrapper {
+  overflow-y: auto;
+  flex: 1;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+}
+
+.live-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.live-table thead {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 2;
+}
+
+.live-table th {
+  padding: 9px 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-bottom: 1.5px solid var(--surface-border);
+  white-space: nowrap;
+}
+
+.live-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--text-main);
+}
+
+.live-table tr {
+  transition: background 0.3s;
+}
+
+.live-table tr.active-turn {
+  background: var(--primary-light) !important;
+  font-weight: 700;
+}
+.live-table tr.active-turn td:first-child {
+  border-left: 3px solid var(--primary);
+}
+
+.live-table tr.updated-good {
+  animation: flashGood 1.2s ease-out;
+}
+.live-table tr.updated-bad {
+  animation: flashBad 1.2s ease-out;
+}
+
+@keyframes flashGood {
+  0% { background: #bbf7d0; }
+  100% { background: transparent; }
+}
+@keyframes flashBad {
+  0% { background: #fecaca; }
+  100% { background: transparent; }
+}
+
+.cell-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.cell-pill.one { background: var(--success-light); color: var(--success); border: 1px solid var(--success-border); }
+.cell-pill.zero { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger-border); }
+.cell-pill.pending { background: #f1f5f9; color: #94a3b8; }
+.cell-pill.absent { background: #e2e8f0; color: #64748b; font-style: italic; }
+
+.sheet-footer {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Complete Screen */
+#complete-screen { text-align: center; }
+#complete-screen h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0 16px;
+}
+.stat-box {
+  padding: 16px 10px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--surface-border);
+}
+.stat-box strong {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--primary);
+}
+.stat-box span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* Floating Audio Controls */
+.audio-bar {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+}
+.audio-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s;
+}
+.audio-btn:hover { background: #f8fafc; border-color: var(--primary); }
+.audio-btn.off { color: #94a3b8; text-decoration: line-through; opacity: 0.7; }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+
+<!-- Audio Controls -->
+<div class="audio-bar">
+  <button id="sfx-btn" class="audio-btn" onclick="toggleSfx()">🔊 SFX</button>
+  <button id="voice-btn" class="audio-btn" onclick="toggleVoice()">🗣️ Voice</button>
+  <button id="music-btn" class="audio-btn" onclick="toggleMusic()">🎵 Music</button>
+</div>
+<audio id="bg-audio" src="bgmusic.mp3" loop preload="auto"></audio>
+
+<div class="portal-container" id="portal-container">
+  <div class="main-layout">
+
+    <!-- Primary Quiz Card -->
+    <div class="card" id="quiz-main-card">
+      <div class="portal-header">
+        <div class="badge-row">
+          <span class="badge status"><span class="status-dot"></span> Evaluator Ready</span>
+          <span class="badge primary">BS(AI) 3B</span>
+          <span class="badge">CSCL 3206</span>
+          <button class="toggle-sheet-btn active" id="toggle-sheet-btn" onclick="toggleLiveSheet()">
+            📊 Live Excel Sheet: ON
+          </button>
+        </div>
+        <h1>SZABIST AI Lab Quiz Portal</h1>
+        <p class="subtitle">Artificial Intelligence Laboratory — Rotation Assessment Session</p>
+      </div>
+
+      <!-- Minimal AI Strip -->
+      <div class="ai-strip">
+        <div class="ai-strip-left">
+          <span>⚡</span>
+          <span id="ai-status-text">System ready. Select class sheet or start with BSAI 3B roster.</span>
+        </div>
+        <span class="auto-save-pill" id="save-status-pill">Auto-Save: Active</span>
+      </div>
+
+      <!-- Screen 1: Upload / Setup Screen -->
+      <div id="start-screen">
+        <div class="upload-card">
+          <label for="excel-file">📁 Upload Class Excel Sheet (BSAI 3B.xlsx)</label><br>
+          <input type="file" id="excel-file" accept=".xlsx, .xls">
+          <small id="file-status" class="status-msg">Optional: upload your Excel to auto-update student marks.</small>
+        </div>
+
+        <div class="upload-card">
+          <label for="json-file">📄 Optional: Add Extra Questions (.json)</label><br>
+          <input type="file" id="json-file" accept=".json">
+          <small id="q-status" class="status-msg">150 Questions already pre-loaded into the system.</small>
+        </div>
+
+        <div class="info-banner">
+          Session Protocol: 2 Questions per student in continuous class rotation.
+        </div>
+
+        <button class="btn" onclick="startClassQuiz()">Start Class Quiz Session</button>
+        <button class="btn secondary" onclick="startWithoutExcel()">⚡ Quick Start with Default 38 Students</button>
+      </div>
+
+      <!-- Screen 2: Active Clean Quiz Screen -->
+      <div id="quiz-screen" class="hidden">
+        <div class="meta-row">
+          <span id="round-indicator">Round 1 of 2</span>
+          <span class="streak-pill" id="streak-indicator">⚡ 0 Streak</span>
+          <span id="student-progress">Student 1 of 38</span>
+        </div>
+
+        <!-- Timer Bar -->
+        <div class="timer-track" title="Response Timer">
+          <div class="timer-bar" id="timer-bar"></div>
+        </div>
+
+        <!-- Progress Nodes Matrix -->
+        <div class="nodes-matrix" id="path"></div>
+
+        <!-- Candidate Box -->
+        <div class="candidate-box">
+          <div class="candidate-label">Current Turn</div>
+          <div class="candidate-name" id="cand-name">Muhammad Haram</div>
+          <div class="candidate-reg" id="cand-reg">Reg No: 24108118</div>
+        </div>
+
+        <!-- Question & Options Box -->
+        <div class="qbox">
+          <div id="question-text"></div>
+          <div class="options-grid" id="options-container"></div>
+          <div class="hint-row" id="question-hint"></div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="action-row">
+          <button class="btn" id="main-btn" onclick="submitStudentAnswer()">Submit Answer</button>
+          <button class="btn btn-skip" id="skip-btn" onclick="skipCandidate()">Skip / Absent</button>
+        </div>
+
+        <!-- Shortcuts -->
+        <div class="shortcuts-row">
+          <span><kbd>1</kbd>/<kbd>2</kbd> or <kbd>A</kbd>/<kbd>B</kbd> Select</span>
+          <span><kbd>Enter</kbd> Submit/Next</span>
+          <span><kbd>H</kbd> Hint</span>
+          <span><kbd>S</kbd> Skip</span>
+        </div>
+      </div>
+
+      <!-- Screen 3: Complete Screen -->
+      <div id="complete-screen" class="hidden">
+        <h2>Class Quiz Session Completed!</h2>
+        <p style="color:var(--text-muted); font-size:14px;">All student marks have been calculated successfully.</p>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <strong id="st-total">0</strong>
+            <span>Correct Answers</span>
+          </div>
+          <div class="stat-box">
+            <strong id="st-acc">0%</strong>
+            <span>Class Accuracy</span>
+          </div>
+          <div class="stat-box">
+            <strong id="st-perfect">0</strong>
+            <span>Perfect (2/2)</span>
+          </div>
+        </div>
+
+        <button class="btn success" onclick="downloadClassExcel()" style="margin-top:16px;">
+          💾 Download Updated BSAI 3B Excel Sheet
+        </button>
+        <button class="btn secondary" onclick="location.reload()" style="margin-top:8px;">
+          Restart Session
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Excel Sheet Side Panel -->
+    <div class="live-sheet-panel" id="live-sheet-panel">
+      <div class="sheet-header">
+        <div class="sheet-title">
+          <span>📊</span> Live Class Marks Sheet
+        </div>
+        <div class="sheet-metrics">
+          <span class="metric-tag">Evaluated: <b id="metric-evaluated">0/38</b></span>
+          <span class="metric-tag">Total Marks: <b id="metric-total">0</b></span>
+        </div>
+      </div>
+
+      <div class="sheet-search">
+        <input type="text" id="sheet-search-input" placeholder="🔍 Search student name or Reg No..." oninput="filterLiveTable()">
+      </div>
+
+      <div class="table-wrapper">
+        <table class="live-table">
+          <thead>
+            <tr>
+              <th style="width:30px">#</th>
+              <th>Reg No</th>
+              <th>Student Name</th>
+              <th style="text-align:center">R1</th>
+              <th style="text-align:center">R2</th>
+              <th style="text-align:center">Total</th>
+            </tr>
+          </thead>
+          <tbody id="live-table-body">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sheet-footer">
+        <small style="color:var(--text-muted); font-size:11px;">Auto-updates as questions are evaluated.</small>
+        <button class="toggle-sheet-btn" onclick="downloadClassExcel()">💾 Export .xlsx</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ==================== 1. ROSTER & QUESTIONS ==================== */
+const defaultStudents = [
+  {"Reg No": 24108118, "Name": "Muhammad Haram"},
+  {"Reg No": 24108184, "Name": "Suleman Sajid"},
+  {"Reg No": 24108199, "Name": "Ershan"},
+  {"Reg No": 24108200, "Name": "Ezaan"},
+  {"Reg No": 24108251, "Name": "Bhoomika Bai"},
+  {"Reg No": 24108284, "Name": "Zohaib Ali"},
+  {"Reg No": 24108285, "Name": "Alishba Kashif"},
+  {"Reg No": 24108291, "Name": "Saeedullah"},
+  {"Reg No": 25108107, "Name": "Ammar Ahsan"},
+  {"Reg No": 25108120, "Name": "Muhammad Ali Siddiqui"},
+  {"Reg No": 25108123, "Name": "Muhammad Muneeb Ul Haq"},
+  {"Reg No": 25108145, "Name": "Abdul Kabeer Khatri"},
+  {"Reg No": 25108146, "Name": "Abdul Rafay Shaikh Muhammad Ismail"},
+  {"Reg No": 25108147, "Name": "Aroosa Pervez"},
+  {"Reg No": 25108148, "Name": "Asif Sohail"},
+  {"Reg No": 25108149, "Name": "Awais Ali"},
+  {"Reg No": 25108150, "Name": "Ayesha Rehman"},
+  {"Reg No": 25108153, "Name": "Danya Saqib"},
+  {"Reg No": 25108154, "Name": "Hafsa Imran"},
+  {"Reg No": 25108155, "Name": "Hammad Hussain"},
+  {"Reg No": 25108156, "Name": "Hasham Magsi"},
+  {"Reg No": 25108159, "Name": "Kamil Karim"},
+  {"Reg No": 25108163, "Name": "Muhammad Hashir Vesir"},
+  {"Reg No": 25108164, "Name": "Muhammad Hassan Raza"},
+  {"Reg No": 25108165, "Name": "Muhammad Ibrahim"},
+  {"Reg No": 25108166, "Name": "Muhammad Irtaza"},
+  {"Reg No": 25108167, "Name": "Muhammad Shahbaz"},
+  {"Reg No": 25108168, "Name": "Muhammad Usman"},
+  {"Reg No": 25108169, "Name": "Muskan Kumari Vanesh Kumar"},
+  {"Reg No": 25108171, "Name": "Omar Siddiqui"},
+  {"Reg No": 25108172, "Name": "Prachi Inder Kachella"},
+  {"Reg No": 25108175, "Name": "Sanjana Goreja"},
+  {"Reg No": 25108178, "Name": "Sarim Saleem"},
+  {"Reg No": 25108182, "Name": "Suneina"},
+  {"Reg No": 25108183, "Name": "Syed Mir Muhammad Shah"},
+  {"Reg No": 25108184, "Name": "Syed Rahim Abbas Naqvi"},
+  {"Reg No": 25108188, "Name": "Zeeshan Ali"},
+  {"Reg No": 25108240, "Name": "Areeba Usman"}
+];
+
+let students = defaultStudents.slice();
+
+const jsonQuestions = [
+  {"id":1,"question":"What does AI stand for?","options":["A) Artificial Intelligence","B) Alien Invasion"],"correct_answer":0,"hint":"AI = Artificial Intelligence."},
+  {"id":2,"question":"Which data structure does BFS use?","options":["A) Queue","B) Magic Wand"],"correct_answer":0,"hint":"BFS uses a FIFO queue."},
+  {"id":3,"question":"Which data structure does DFS use?","options":["A) Stack","B) Basket of Oranges"],"correct_answer":0,"hint":"DFS uses a LIFO stack."},
+  {"id":4,"question":"What is the A* evaluation function?","options":["A) f(n) = g(n) + h(n)","B) f(n) = pizza + burger"],"correct_answer":0,"hint":"A* adds g(n) and h(n)."},
+  {"id":5,"question":"Which keyword defines a function in Python?","options":["A) def","B) potato"],"correct_answer":0,"hint":"Python uses 'def'."},
+  {"id":6,"question":"Which language is used in this AI lab?","options":["A) Python","B) Klingon"],"correct_answer":0,"hint":"The lab uses Python."},
+  {"id":7,"question":"What does ML stand for?","options":["A) Machine Learning","B) Monkey Language"],"correct_answer":0,"hint":"ML = Machine Learning."},
+  {"id":8,"question":"BFS explores the graph how?","options":["A) Level by level","B) By magic"],"correct_answer":0,"hint":"BFS goes level by level."},
+  {"id":9,"question":"DFS explores the graph how?","options":["A) Deep first, then backtrack","B) By teleporting"],"correct_answer":0,"hint":"DFS goes deep, then backtracks."},
+  {"id":10,"question":"A* search uses what to guide it?","options":["A) A heuristic","B) A crystal ball"],"correct_answer":0,"hint":"A* uses a heuristic h(n)."},
+  {"id":11,"question":"Which Python type is a list?","options":["A) [1, 2, 3]","B) {a bowl of rice}"],"correct_answer":0,"hint":"Lists use square brackets."},
+  {"id":12,"question":"What is the Turing Test about?","options":["A) Machine intelligence","B) Testing a toaster"],"correct_answer":0,"hint":"It tests machine intelligence."},
+  {"id":13,"question":"BFS finds shortest path in which graphs?","options":["A) Unweighted graphs","B) Only in space"],"correct_answer":0,"hint":"BFS works for unweighted graphs."},
+  {"id":14,"question":"What is backtracking?","options":["A) Going back when stuck","B) Eating a snack"],"correct_answer":0,"hint":"Go back when no path remains."},
+  {"id":15,"question":"Which heuristic is used in grid search?","options":["A) Manhattan distance","B) Number of stars"],"correct_answer":0,"hint":"Manhattan distance is common."},
+  {"id":16,"question":"How do you loop over a list in Python?","options":["A) for x in items:","B) loop like a boss:"],"correct_answer":0,"hint":"Use 'for x in items:'."},
+  {"id":17,"question":"Which AI field learns from data?","options":["A) Machine Learning","B) Cooking"],"correct_answer":0,"hint":"Machine Learning learns from data."},
+  {"id":18,"question":"Which operation adds to a queue?","options":["A) enqueue","B) enchant"],"correct_answer":0,"hint":"enqueue adds to a queue."},
+  {"id":19,"question":"Recursion uses which structure?","options":["A) Call stack","B) A ladder"],"correct_answer":0,"hint":"Recursion uses the call stack."},
+  {"id":20,"question":"What is g(n) in A*?","options":["A) Cost from start to n","B) Cost of a burger"],"correct_answer":0,"hint":"g(n) = cost so far."},
+  {"id":21,"question":"Which function gives list length in Python?","options":["A) len()","B) lengthy()"],"correct_answer":0,"hint":"Use len()."},
+  {"id":22,"question":"What is a state space?","options":["A) All possible states","B) Outer space"],"correct_answer":0,"hint":"All reachable states."},
+  {"id":23,"question":"Which search uses a priority queue by f(n)?","options":["A) A* Search","B) Duck Search"],"correct_answer":0,"hint":"A* uses a priority queue."},
+  {"id":24,"question":"Main drawback of DFS?","options":["A) Not always shortest path","B) It is too slow to spell"],"correct_answer":0,"hint":"DFS may not find shortest path."},
+  {"id":25,"question":"If h(n)=0, A* becomes?","options":["A) Uniform Cost Search","B) A magic trick"],"correct_answer":0,"hint":"h=0 means uniform cost search."},
+  {"id":26,"question":"Which handles errors in Python?","options":["A) try/except","B) pray/except"],"correct_answer":0,"hint":"try/except handles errors."},
+  {"id":27,"question":"What is an agent?","options":["A) Something that perceives and acts","B) A secret spy only"],"correct_answer":0,"hint":"Perceives and acts."},
+  {"id":28,"question":"BFS order is?","options":["A) Level by level","B) Randomly"],"correct_answer":0,"hint":"BFS is level order."},
+  {"id":29,"question":"DFS avoids repeats using?","options":["A) Visited set","B) Good luck"],"correct_answer":0,"hint":"Use a visited set."},
+  {"id":30,"question":"Greedy search uses?","options":["A) h(n) only","B) g(n) only"],"correct_answer":0,"hint":"Greedy uses only h(n)."},
+  {"id":31,"question":"Which keyword makes a small function in Python?","options":["A) lambda","B) potato"],"correct_answer":0,"hint":"lambda makes anonymous functions."},
+  {"id":32,"question":"PEAS stands for?","options":["A) Performance, Environment, Actuators, Sensors","B) Peas, Eggs, Apples, Sugar"],"correct_answer":0,"hint":"PEAS = Performance, Environment, Actuators, Sensors."},
+  {"id":33,"question":"BFS memory is roughly?","options":["A) O(b^d)","B) O(1)"],"correct_answer":0,"hint":"BFS memory is exponential."},
+  {"id":34,"question":"DFS memory is roughly?","options":["A) O(b*m)","B) O(infinity)"],"correct_answer":0,"hint":"DFS uses linear memory."},
+  {"id":35,"question":"A consistent heuristic is also?","options":["A) Admissible","B) Delicious"],"correct_answer":0,"hint":"Consistent implies admissible."},
+  {"id":36,"question":"How to define a class in Python?","options":["A) class Name:","B) classy Name:"],"correct_answer":0,"hint":"Use 'class Name:'."},
+  {"id":37,"question":"Which search is uninformed?","options":["A) BFS","B) A*"],"correct_answer":0,"hint":"BFS is uninformed."},
+  {"id":38,"question":"What is branching factor b?","options":["A) Children per node","B) Trees in a forest"],"correct_answer":0,"hint":"Children per node."},
+  {"id":39,"question":"Which goes deep first?","options":["A) DFS","B) BFS"],"correct_answer":0,"hint":"DFS goes deep first."},
+  {"id":40,"question":"A* is optimal if h is?","options":["A) Admissible","B) Random"],"correct_answer":0,"hint":"Admissible heuristic = optimal."},
+  {"id":41,"question":"Which Python type stores key-value?","options":["A) dict","B) list"],"correct_answer":0,"hint":"dict stores key-value pairs."},
+  {"id":42,"question":"Search algorithms try to find?","options":["A) A path to the goal","B) A good movie"],"correct_answer":0,"hint":"A path to the goal."},
+  {"id":43,"question":"BFS is complete if?","options":["A) Branching is finite","B) The graph is infinite only"],"correct_answer":0,"hint":"Finite branching = complete."},
+  {"id":44,"question":"DFS is optimal?","options":["A) Not in general","B) Always"],"correct_answer":0,"hint":"DFS is not optimal."},
+  {"id":45,"question":"f(start) in A* equals?","options":["A) h(start)","B) 100"],"correct_answer":0,"hint":"g(start)=0, so f=h."},
+  {"id":46,"question":"Which list method adds to the end?","options":["A) append()","B) add()"],"correct_answer":0,"hint":"append() adds to end."},
+  {"id":47,"question":"Admissible heuristic means?","options":["A) Never overestimates","B) Always overestimates"],"correct_answer":0,"hint":"Never overestimates."},
+  {"id":48,"question":"O(1) lookup by key uses?","options":["A) Hash table","B) A phone book"],"correct_answer":0,"hint":"Hash tables give O(1) lookup."},
+  {"id":49,"question":"Iterative deepening combines?","options":["A) DFS memory + BFS completeness","B) BFS memory + DFS speed"],"correct_answer":0,"hint":"DFS memory, BFS completeness."},
+  {"id":50,"question":"A* stops when?","options":["A) Goal is expanded","B) The sun sets"],"correct_answer":0,"hint":"Stop when goal is expanded."},
+  {"id":51,"question":"How to inherit in Python?","options":["A) class Child(Parent):","B) inherits Child from Parent"],"correct_answer":0,"hint":"Put parent in parentheses."},
+  {"id":52,"question":"Goal test checks?","options":["A) If state is a goal","B) If state is tasty"],"correct_answer":0,"hint":"Checks if the state is a goal."},
+  {"id":53,"question":"BFS on cyclic graph needs?","options":["A) Visited set","B) Nothing"],"correct_answer":0,"hint":"Use a visited set."},
+  {"id":54,"question":"Depth-limited search does what?","options":["A) Limits recursion depth","B) Limits pizza size"],"correct_answer":0,"hint":"Limits depth."},
+  {"id":55,"question":"Weighted graphs use?","options":["A) Dijkstra/A*","B) Plain BFS only"],"correct_answer":0,"hint":"Use Dijkstra or A*."},
+  {"id":56,"question":"How to write a comment in Python?","options":["A) # comment","B) // comment"],"correct_answer":0,"hint":"Use #."},
+  {"id":57,"question":"Machine learning is?","options":["A) Learning from data","B) Learning to fly"],"correct_answer":0,"hint":"Learn from data."},
+  {"id":58,"question":"Which removes front of queue?","options":["A) dequeue","B) enqueue"],"correct_answer":0,"hint":"dequeue removes front."},
+  {"id":59,"question":"DFS order is?","options":["A) LIFO","B) FIFO"],"correct_answer":0,"hint":"DFS is LIFO."},
+  {"id":60,"question":"A* advantage over BFS?","options":["A) Uses a heuristic","B) Uses a wand"],"correct_answer":0,"hint":"A* uses heuristic."},
+  {"id":61,"question":"Which converts string to int?","options":["A) int()","B) str()"],"correct_answer":0,"hint":"int() converts to integer."},
+  {"id":62,"question":"Supervised learning uses?","options":["A) Labeled data","B) No data"],"correct_answer":0,"hint":"Uses labeled data."},
+  {"id":63,"question":"BFS shortest path when?","options":["A) Edge costs are equal","B) Edge costs are random"],"correct_answer":0,"hint":"Equal edge costs."},
+  {"id":64,"question":"DFS is used for?","options":["A) Cycle detection","B) Cooking pasta"],"correct_answer":0,"hint":"DFS detects cycles."},
+  {"id":65,"question":"Closed set in A* stores?","options":["A) Expanded nodes","B) Closed doors"],"correct_answer":0,"hint":"Stores expanded nodes."},
+  {"id":66,"question":"Which checks equality in Python?","options":["A) ==","B) ="],"correct_answer":0,"hint":"== checks equality."},
+  {"id":67,"question":"Reinforcement learning uses?","options":["A) Rewards","B) Magic spells"],"correct_answer":0,"hint":"RL uses rewards."},
+  {"id":68,"question":"BFS explores by?","options":["A) Increasing depth","B) Decreasing depth"],"correct_answer":0,"hint":"Increasing depth."},
+  {"id":69,"question":"Iterative DFS uses?","options":["A) Stack","B) Queue"],"correct_answer":0,"hint":"Uses a stack."},
+  {"id":70,"question":"Admissible h gives A*?","options":["A) Optimal path","B) Fastest typing speed"],"correct_answer":0,"hint":"Admissible h gives optimal path."},
+  {"id":71,"question":"Which module has sqrt?","options":["A) math","B) magic"],"correct_answer":0,"hint":"Use the math module."},
+  {"id":72,"question":"AI vs ML?","options":["A) ML is a subset of AI","B) They are unrelated"],"correct_answer":0,"hint":"ML is a subset of AI."},
+  {"id":73,"question":"BFS frontier stores?","options":["A) Discovered, unexpanded nodes","B) Only goal nodes"],"correct_answer":0,"hint":"Discovered, unexpanded nodes."},
+  {"id":74,"question":"DFS can loop forever if?","options":["A) No visited set","B) The graph is small"],"correct_answer":0,"hint":"Loops without visited set."},
+  {"id":75,"question":"Consistent heuristic is?","options":["A) Admissible","B) Not admissible"],"correct_answer":0,"hint":"Consistent implies admissible."},
+  {"id":76,"question":"Which exits a loop in Python?","options":["A) break","B) continue"],"correct_answer":0,"hint":"break exits the loop."},
+  {"id":77,"question":"Game AI uses?","options":["A) Minimax","B) Bubble sort"],"correct_answer":0,"hint":"Minimax for games."},
+  {"id":78,"question":"BFS time is?","options":["A) O(b^d)","B) O(1)"],"correct_answer":0,"hint":"BFS time is O(b^d)."},
+  {"id":79,"question":"SCC finding uses?","options":["A) DFS","B) BFS only"],"correct_answer":0,"hint":"Tarjan uses DFS."},
+  {"id":80,"question":"Overestimating h causes?","options":["A) Suboptimal path","B) Perfect path"],"correct_answer":0,"hint":"Overestimating breaks optimality."},
+  {"id":81,"question":"List comprehension syntax?","options":["A) [x for x in items]","B) list x for items"],"correct_answer":0,"hint":"[x for x in items]."},
+  {"id":82,"question":"Frame problem is about?","options":["A) What does not change","B) Picture frames"],"correct_answer":0,"hint":"What does not change."},
+  {"id":83,"question":"In BFS, mark visited when?","options":["A) When enqueued","B) After all work is done"],"correct_answer":0,"hint":"Mark when enqueued."},
+  {"id":84,"question":"Which uses recursion naturally?","options":["A) DFS","B) BFS"],"correct_answer":0,"hint":"DFS uses recursion."},
+  {"id":85,"question":"A* open list is a?","options":["A) Priority queue","B) Stack of pancakes"],"correct_answer":0,"hint":"Min-heap priority queue."},
+  {"id":86,"question":"Which removes last list item?","options":["A) pop()","B) push()"],"correct_answer":0,"hint":"pop() removes last item."},
+  {"id":87,"question":"NLP deals with?","options":["A) Human language","B) Computer hardware"],"correct_answer":0,"hint":"NLP = human language."},
+  {"id":88,"question":"BFS on weighted graphs?","options":["A) Not optimal","B) Always optimal"],"correct_answer":0,"hint":"BFS is not optimal for weights."},
+  {"id":89,"question":"Memoization means?","options":["A) Caching results","B) Memorizing songs"],"correct_answer":0,"hint":"Caching subproblem results."},
+  {"id":90,"question":"A* vs Dijkstra?","options":["A) A* adds h(n)","B) They are identical"],"correct_answer":0,"hint":"A* adds a heuristic."},
+  {"id":91,"question":"Which is conditional in Python?","options":["A) if","B) when"],"correct_answer":0,"hint":"Use if."},
+  {"id":92,"question":"Expert system uses?","options":["A) Rules","B) Spells"],"correct_answer":0,"hint":"Rule-based knowledge."},
+  {"id":93,"question":"Weighted shortest path uses?","options":["A) Uniform Cost Search","B) Plain BFS"],"correct_answer":0,"hint":"UCS/Dijkstra for weights."},
+  {"id":94,"question":"DFS detects?","options":["A) Cycles","B) The future"],"correct_answer":0,"hint":"DFS detects cycles."},
+  {"id":95,"question":"Inadmissible h makes A*?","options":["A) Not optimal","B) Always optimal"],"correct_answer":0,"hint":"Inadmissible = not optimal."},
+  {"id":96,"question":"Which makes a number range?","options":["A) range()","B) seq()"],"correct_answer":0,"hint":"range() makes ranges."},
+  {"id":97,"question":"Alpha-beta pruning does?","options":["A) Prunes minimax branches","B) Grows trees"],"correct_answer":0,"hint":"Prunes branches in minimax."},
+  {"id":98,"question":"BFS frontier is a?","options":["A) Queue","B) Stack"],"correct_answer":0,"hint":"BFS uses a queue."},
+  {"id":99,"question":"DFS base case is?","options":["A) No unvisited neighbors/goal","B) The root always"],"correct_answer":0,"hint":"Stop at goal or no neighbors."},
+  {"id":100,"question":"Worst-case A* time?","options":["A) Exponential","B) O(1)"],"correct_answer":0,"hint":"Worst case is exponential."},
+  {"id":101,"question":"Which defines a generator?","options":["A) yield","B) return"],"correct_answer":0,"hint":"yield defines a generator."},
+  {"id":102,"question":"Chinese Room is about?","options":["A) Machine understanding","B) Room temperature"],"correct_answer":0,"hint":"It questions machine understanding."},
+  {"id":103,"question":"BFS on unweighted graphs gives?","options":["A) Minimum edges to goal","B) Maximum weight"],"correct_answer":0,"hint":"Minimum edges (hops)."},
+  {"id":104,"question":"Maze solving with one full path uses?","options":["A) DFS","B) BFS"],"correct_answer":0,"hint":"DFS explores one path fully."},
+  {"id":105,"question":"h(n)=0 in A* gives?","options":["A) Uniform Cost Search","B) Greedy search"],"correct_answer":0,"hint":"h=0 → UCS."},
+  {"id":106,"question":"Which joins strings in Python?","options":["A) join()","B) glue()"],"correct_answer":0,"hint":"Use join()."},
+  {"id":107,"question":"Overfitting means?","options":["A) Fits training too closely","B) Fits perfectly always"],"correct_answer":0,"hint":"Fits training too closely."},
+  {"id":108,"question":"BFS is optimal when costs are?","options":["A) Equal","B) Negative"],"correct_answer":0,"hint":"Equal/unit edge costs."},
+  {"id":109,"question":"DFS space is?","options":["A) O(b*m)","B) O(b^d)"],"correct_answer":0,"hint":"DFS space is linear."},
+  {"id":110,"question":"Admissible 8-puzzle heuristic?","options":["A) Misplaced tiles","B) Moves made so far"],"correct_answer":0,"hint":"Misplaced tiles is admissible."},
+  {"id":111,"question":"Which is mutable in Python?","options":["A) list","B) tuple"],"correct_answer":0,"hint":"Lists are mutable."},
+  {"id":112,"question":"Rational agent acts to?","options":["A) Maximize performance","B) Act randomly"],"correct_answer":0,"hint":"Maximize expected performance."},
+  {"id":113,"question":"BFS order is?","options":["A) FIFO","B) LIFO"],"correct_answer":0,"hint":"BFS is FIFO."},
+  {"id":114,"question":"Iterative DFS uses?","options":["A) Explicit stack","B) Priority queue"],"correct_answer":0,"hint":"Explicit stack simulates recursion."},
+  {"id":115,"question":"A* main cost is?","options":["A) Memory","B) Sorting input"],"correct_answer":0,"hint":"A* uses lots of memory."},
+  {"id":116,"question":"Which opens a file to read?","options":["A) open('f.txt','r')","B) read('f.txt')"],"correct_answer":0,"hint":"open with 'r' reads."},
+  {"id":117,"question":"Decision tree does?","options":["A) Splits data by features","B) Searches graphs"],"correct_answer":0,"hint":"Splits data by features."},
+  {"id":118,"question":"Efficient BFS uses?","options":["A) collections.deque","B) A magic box"],"correct_answer":0,"hint":"deque gives O(1) popleft."},
+  {"id":119,"question":"Graph search differs by?","options":["A) Tracking visited nodes","B) Being identical"],"correct_answer":0,"hint":"Graph search tracks visited."},
+  {"id":120,"question":"Weighted A* does?","options":["A) Trades optimality for speed","B) Always optimal"],"correct_answer":0,"hint":"Weighted A* is faster, not optimal."},
+  {"id":121,"question":"Multiple exceptions use?","options":["A) except (TypeError, ValueError):","B) catch all:"],"correct_answer":0,"hint":"Use a tuple in except."},
+  {"id":122,"question":"Cross-validation does?","options":["A) Estimates generalization","B) Speeds typing"],"correct_answer":0,"hint":"Estimates generalization."},
+  {"id":123,"question":"BFS disadvantage is?","options":["A) High memory","B) Cannot handle graphs"],"correct_answer":0,"hint":"BFS uses high memory."},
+  {"id":124,"question":"DFS with visited set is?","options":["A) Terminating","B) Never terminating"],"correct_answer":0,"hint":"It terminates on finite graphs."},
+  {"id":125,"question":"Dijkstra vs A*?","options":["A) A* = Dijkstra + heuristic","B) Unrelated"],"correct_answer":0,"hint":"A* generalizes Dijkstra."},
+  {"id":126,"question":"Default argument syntax?","options":["A) def f(x=0):","B) def f(x:0):"],"correct_answer":0,"hint":"Use = for defaults."},
+  {"id":127,"question":"Regularization does?","options":["A) Reduces overfitting","B) Increases overfitting"],"correct_answer":0,"hint":"Regularization reduces overfitting."},
+  {"id":128,"question":"BFS finds?","options":["A) Shortest path (unweighted)","B) Longest path"],"correct_answer":0,"hint":"Shortest path in unweighted graphs."},
+  {"id":129,"question":"DFS visit order is?","options":["A) Pre-order","B) Level-order"],"correct_answer":0,"hint":"DFS visits node before descendants."},
+  {"id":130,"question":"IDA* advantage?","options":["A) Low memory + optimality","B) No heuristic"],"correct_answer":0,"hint":"Low memory with A* optimality."},
+  {"id":131,"question":"In-place list sort uses?","options":["A) list.sort()","B) sorted() only"],"correct_answer":0,"hint":"list.sort() sorts in place."},
+  {"id":132,"question":"Neural network is?","options":["A) Weighted layers trained on data","B) A search algorithm"],"correct_answer":0,"hint":"Layers of weighted units."},
+  {"id":133,"question":"BFS relies on?","options":["A) FIFO","B) LIFO"],"correct_answer":0,"hint":"BFS uses FIFO."},
+  {"id":134,"question":"DFS worst-case time?","options":["A) O(b^m)","B) O(log n)"],"correct_answer":0,"hint":"DFS worst case is O(b^m)."},
+  {"id":135,"question":"Consistent 8-puzzle heuristic?","options":["A) Manhattan distance","B) Nodes expanded"],"correct_answer":0,"hint":"Manhattan is consistent."},
+  {"id":136,"question":"Power operator in Python?","options":["A) **","B) ^"],"correct_answer":0,"hint":"** is exponentiation."},
+  {"id":137,"question":"Clustering is?","options":["A) Grouping similar data","B) Predicting labels"],"correct_answer":0,"hint":"Unsupervised grouping."},
+  {"id":138,"question":"BFS expands which next?","options":["A) Oldest node","B) Newest node"],"correct_answer":0,"hint":"Oldest node (FIFO)."},
+  {"id":139,"question":"DFS is good for?","options":["A) Maze path finding","B) Bubble sort"],"correct_answer":0,"hint":"Maze path finding."},
+  {"id":140,"question":"Heuristic in A* does?","options":["A) Guides the search","B) Slows the CPU"],"correct_answer":0,"hint":"Heuristic guides the search."},
+  {"id":141,"question":"Which Python loop runs while a condition is true?","options":["A) while","B) until"],"correct_answer":0,"hint":"Python uses while."},
+  {"id":142,"question":"An admissible heuristic is?","options":["A) Never overestimating","B) Always overestimating"],"correct_answer":0,"hint":"Never overestimates."},
+  {"id":143,"question":"BFS visited marking prevents?","options":["A) Repeats/loops","B) Fast search"],"correct_answer":0,"hint":"Prevents repeats and loops."},
+  {"id":144,"question":"DFS is not optimal because?","options":["A) It may find a longer path first","B) It is too fast"],"correct_answer":0,"hint":"May find a longer path first."},
+  {"id":145,"question":"A* returns optimal path if h is?","options":["A) Admissible","B) Inadmissible"],"correct_answer":0,"hint":"Admissible h = optimal."},
+  {"id":146,"question":"Which Python type is immutable?","options":["A) tuple","B) list"],"correct_answer":0,"hint":"Tuples are immutable."},
+  {"id":147,"question":"Learning with labels is?","options":["A) Supervised learning","B) Sleeping"],"correct_answer":0,"hint":"Supervised learning uses labels."},
+  {"id":148,"question":"BFS expands nodes in?","options":["A) FIFO order","B) Random order"],"correct_answer":0,"hint":"FIFO order."},
+  {"id":149,"question":"DFS uses which structure?","options":["A) Stack","B) Queue"],"correct_answer":0,"hint":"DFS uses a stack."},
+  {"id":150,"question":"A* combines?","options":["A) g(n) + h(n)","B) pizza + burger"],"correct_answer":0,"hint":"f(n) = g(n) + h(n)."}
+];
+
+/* ==================== 2. SOUND SYNTHESIZER ==================== */
+let audioCtx = null;
+let sfxEnabled = true;
+let voiceEnabled = true;
+
+function initAudio() {
+  if (!audioCtx) {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (Ctor) audioCtx = new Ctor();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(type) {
+  if (!sfxEnabled) return;
+  initAudio();
+  if (!audioCtx) return;
+
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  if (type === 'select') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, now);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc.start(now); osc.stop(now + 0.05);
+  } else if (type === 'correct') {
+    [523.25, 659.25, 783.99].forEach((f, idx) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(f, now + idx * 0.08);
+      g.gain.setValueAtTime(0.12, now + idx * 0.08);
+      g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+      o.start(now + idx * 0.08); o.stop(now + idx * 0.08 + 0.25);
+    });
+  } else if (type === 'wrong') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.linearRampToValueAtTime(140, now + 0.25);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.start(now); osc.stop(now + 0.25);
+  } else if (type === 'tick') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1000, now);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    osc.start(now); osc.stop(now + 0.04);
+  }
+}
+
+function speakName(name) {
+  if (!voiceEnabled || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(name);
+  utter.rate = 1.0;
+  window.speechSynthesis.speak(utter);
+}
+
+function toggleSfx() {
+  sfxEnabled = !sfxEnabled;
+  const b = $('sfx-btn');
+  b.textContent = '🔊 SFX ' + (sfxEnabled ? 'ON' : 'OFF');
+  b.classList.toggle('off', !sfxEnabled);
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  const b = $('voice-btn');
+  b.textContent = '🗣️ Voice ' + (voiceEnabled ? 'ON' : 'OFF');
+  b.classList.toggle('off', !voiceEnabled);
+  if (!voiceEnabled && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+}
+
+let musicOn = false;
+function toggleMusic() {
+  const a = $('bg-audio');
+  const b = $('music-btn');
+  musicOn = !musicOn;
+  if (musicOn) {
+    a.play().catch(() => {});
+    b.textContent = '🎵 Music ON';
+    b.classList.remove('off');
+  } else {
+    a.pause();
+    b.textContent = '🎵 Music OFF';
+    b.classList.add('off');
+  }
+}
+
+/* ==================== 3. QUIZ STATE & LIVE SHEET ==================== */
+const ROUNDS = 2;
+const TIME_LIMIT = 60;
+let studentScores = {};
+let roundResults = [[], []]; // stores { [studentIndex]: '1' | '0' | 'absent' }
+let currentStudentIndex = 0;
+let currentRound = 1;
+let uploadedWorkbook = null;
+let pool = [];
+let shuffledQuestions = [];
+let selected = null;
+let locked = false;
+let currentQ = null;
+let streak = 0;
+let timerId = null;
+let timeLeft = TIME_LIMIT;
+let showLiveSheet = true;
+
+const $ = id => document.getElementById(id);
+
+const strip = t => String(t).replace(/^\s*[A-Da-d]\)\s*/, '').trim();
+const isPlaceholder = x => /Question #\d+|fictional nonsense|Correct and valid definition/i.test(x.question + ' ' + (x.options || []).join(' '));
+function normalize(x) {
+  return { q: x.question, opts: x.options.map(strip), ans: x.correct_answer, hint: x.hint || '' };
+}
+
+function buildPool(extra) {
+  const all = extra.filter(x => x.options && x.options.length >= 2 && !isPlaceholder(x)).map(normalize);
+  const seen = new Set();
+  pool = all.filter(x => {
+    const k = x.q.toLowerCase().replace(/\W+/g, ' ').trim();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  shuffledQuestions = [...pool].sort(() => 0.5 - Math.random());
+  $('q-status').textContent = pool.length + ' questions loaded and ready.';
+}
+
+window.onload = function() {
+  resetScores();
+  buildPool(jsonQuestions);
+  initFx();
+  renderLiveTable();
+  updateSplitLayout();
+
+  // Excel upload listener
+  $('excel-file').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        uploadedWorkbook = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+        const ws = uploadedWorkbook.Sheets[uploadedWorkbook.SheetNames[0]];
+        const sheetData = XLSX.utils.sheet_to_json(ws);
+        if (sheetData && sheetData.length > 0 && sheetData[0]['Reg No']) {
+          students = sheetData.map(row => ({
+            "Reg No": row['Reg No'],
+            "Name": String(row['Name'] || row['Student Name'] || 'Student').trim()
+          }));
+          resetScores();
+          $('file-status').textContent = `✅ Synced ${students.length} students from ${file.name}`;
+          $('file-status').className = 'status-msg ok';
+          $('ai-status-text').textContent = `Loaded ${students.length} students from ${file.name}.`;
+          renderLiveTable();
+        } else {
+          $('file-status').textContent = `Uploaded ${file.name} (Ready for marks sync)`;
+          $('file-status').className = 'status-msg ok';
+        }
+      } catch (err) {
+        $('file-status').textContent = 'Error reading Excel file.';
+        $('file-status').className = 'status-msg err';
+      }
+    };
+    r.readAsArrayBuffer(file);
+  });
+
+  // JSON upload listener
+  $('json-file').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        const extra = Array.isArray(d) ? d : [];
+        const before = pool.length;
+        buildPool(jsonQuestions.concat(extra));
+        $('q-status').textContent = `✅ Added ${pool.length - before} new questions. Total: ${pool.length}`;
+        $('q-status').className = 'status-msg ok';
+      } catch (err) {
+        $('q-status').textContent = 'Invalid JSON file.';
+        $('q-status').className = 'status-msg err';
+      }
+    };
+    r.readAsText(file);
+  });
+
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    if ($('quiz-screen').classList.contains('hidden')) return;
+    const k = e.key.toLowerCase();
+    if ((k === 'a' || k === '1') && !locked) pick(0);
+    else if ((k === 'b' || k === '2') && !locked) pick(1);
+    else if ((k === 'c' || k === '3') && !locked) pick(2);
+    else if ((k === 'd' || k === '4') && !locked) pick(3);
+    else if (k === 'enter') submitStudentAnswer();
+    else if (k === 'h') showHint();
+    else if (k === 's') skipCandidate();
+  });
+};
+
+function resetScores() {
+  studentScores = {};
+  roundResults = [[], []];
+  students.forEach((s, idx) => {
+    studentScores[s['Reg No']] = 0;
+    roundResults[0][idx] = null;
+    roundResults[1][idx] = null;
+  });
+}
+
+function toggleLiveSheet() {
+  showLiveSheet = !showLiveSheet;
+  const btn = $('toggle-sheet-btn');
+  btn.textContent = '📊 Live Excel Sheet: ' + (showLiveSheet ? 'ON' : 'OFF');
+  btn.classList.toggle('active', showLiveSheet);
+  updateSplitLayout();
+}
+
+function updateSplitLayout() {
+  const container = $('portal-container');
+  const panel = $('live-sheet-panel');
+  if (showLiveSheet) {
+    container.classList.add('split-mode');
+    panel.classList.remove('hidden');
+  } else {
+    container.classList.remove('split-mode');
+    panel.classList.add('hidden');
+  }
+}
+
+/* ==================== 4. LIVE TABLE RENDERING ==================== */
+function renderLiveTable(filterText = '') {
+  const tbody = $('live-table-body');
+  tbody.innerHTML = '';
+  let evaluatedCount = 0;
+  let totalScoreSum = 0;
+
+  const ft = filterText.toLowerCase().trim();
+
+  students.forEach((s, idx) => {
+    const reg = s['Reg No'];
+    const name = s.Name;
+    const r1 = roundResults[0][idx];
+    const r2 = roundResults[1][idx];
+    const tot = studentScores[reg] || 0;
+
+    if (r1 !== null || r2 !== null) evaluatedCount++;
+    totalScoreSum += tot;
+
+    if (ft && !String(reg).includes(ft) && !name.toLowerCase().includes(ft)) {
+      return;
+    }
+
+    const tr = document.createElement('tr');
+    tr.id = `row-student-${idx}`;
+    if (idx === currentStudentIndex && !$('quiz-screen').classList.contains('hidden')) {
+      tr.className = 'active-turn';
+    }
+
+    const formatPill = val => {
+      if (val === '1' || val === 1) return `<span class="cell-pill one">+1</span>`;
+      if (val === '0' || val === 0) return `<span class="cell-pill zero">0</span>`;
+      if (val === 'absent') return `<span class="cell-pill absent">Abs</span>`;
+      return `<span class="cell-pill pending">-</span>`;
+    };
+
+    tr.innerHTML = `
+      <td style="color:var(--text-muted)">${idx + 1}</td>
+      <td style="font-family:'JetBrains Mono',monospace; font-weight:600">${reg}</td>
+      <td>${name}</td>
+      <td style="text-align:center">${formatPill(r1)}</td>
+      <td style="text-align:center">${formatPill(r2)}</td>
+      <td style="text-align:center; font-weight:700; color:var(--primary)">${tot}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  $('metric-evaluated').textContent = `${evaluatedCount}/${students.length}`;
+  $('metric-total').textContent = totalScoreSum;
+}
+
+function filterLiveTable() {
+  const q = $('sheet-search-input').value;
+  renderLiveTable(q);
+}
+
+function scrollRowIntoView(idx) {
+  const row = $(`row-student-${idx}`);
+  if (row) {
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function flashRow(idx, isGood) {
+  const row = $(`row-student-${idx}`);
+  if (row) {
+    row.classList.remove('updated-good', 'updated-bad');
+    void row.offsetWidth;
+    row.classList.add(isGood ? 'updated-good' : 'updated-bad');
+  }
+}
+
+/* ==================== 5. SESSION ENGINE ==================== */
+function startClassQuiz() {
+  if (!uploadedWorkbook) {
+    $('file-status').textContent = '⚠️ Pehlay Excel file select karen ya "Quick Start" dabayein!';
+    $('file-status').className = 'status-msg err';
+    return;
+  }
+  startSession();
+}
+
+function startWithoutExcel() {
+  startSession();
+}
+
+function startSession() {
+  initAudio();
+  if (musicOn) {
+    const a = $('bg-audio');
+    if (a) {
+      a.volume = 0.35;
+      a.play().catch(e => console.log('Autoplay caught:', e));
+    }
+  }
+  $('start-screen').classList.add('hidden');
+  $('quiz-screen').classList.remove('hidden');
+  $('ai-status-text').textContent = 'Quiz active. Live Sheet auto-recording marks.';
+  loadCurrentTurn();
+}
+
+function startTimer() {
+  clearInterval(timerId);
+  timeLeft = TIME_LIMIT;
+  updateTimerUI();
+
+  timerId = setInterval(() => {
+    if (locked) return;
+    timeLeft--;
+    updateTimerUI();
+
+    if (timeLeft <= 5 && timeLeft > 0) playTone('tick');
+    if (timeLeft <= 0) {
+      clearInterval(timerId);
+      if (!locked) submitStudentAnswer();
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const bar = $('timer-bar');
+  const pct = Math.max(0, (timeLeft / TIME_LIMIT) * 100);
+  bar.style.width = pct + '%';
+  bar.className = 'timer-bar' + (pct <= 20 ? ' danger' : pct <= 40 ? ' warning' : '');
+
+  const disp = $('timer-display');
+  if (disp) {
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    disp.textContent = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    disp.style.color = pct <= 20 ? 'var(--danger)' : pct <= 40 ? 'var(--amber)' : 'var(--primary)';
+  }
+}
+
+function drawPath() {
+  const p = $('path');
+  p.innerHTML = '';
+  students.forEach((s, i) => {
+    const res = roundResults[currentRound - 1][i];
+    let cls = '';
+    if (res === 1) cls = ' good';
+    else if (res === 0) cls = ' bad';
+    else if (res === 'absent') cls = ' absent';
+
+    const n = document.createElement('i');
+    n.className = 'node' + cls + (i === currentStudentIndex ? ' now' : '');
+    n.title = `${s['Reg No']} - ${s.Name}`;
+    p.appendChild(n);
+  });
+}
+
+function loadCurrentTurn() {
+  if (currentRound > ROUNDS) {
+    finishClassQuiz();
+    return;
+  }
+
+  const student = students[currentStudentIndex];
+  $('round-indicator').textContent = `Round ${currentRound} of ${ROUNDS}`;
+  $('student-progress').textContent = `Student ${currentStudentIndex + 1} of ${students.length}`;
+  $('streak-indicator').textContent = `⚡ ${streak} Streak`;
+
+  $('cand-name').textContent = student.Name.replace(/\s+/g, ' ');
+  $('cand-reg').textContent = `Reg No: ${student['Reg No']}`;
+
+  speakName(student.Name);
+
+  const qIndex = ((currentRound - 1) * students.length + currentStudentIndex) % shuffledQuestions.length;
+  const q = shuffledQuestions[qIndex];
+  const flip = Math.random() < 0.5;
+
+  currentQ = {
+    opts: flip ? [q.opts[1], q.opts[0]] : q.opts,
+    correct: flip ? 1 - q.ans : q.ans,
+    hint: q.hint
+  };
+
+  $('question-text').textContent = q.q;
+
+  const box = $('options-container');
+  box.innerHTML = '';
+  currentQ.opts.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = `<b>${'ABCD'[i]}</b><span>${t}</span>`;
+    b.onclick = () => pick(i);
+    box.appendChild(b);
+  });
+
+  selected = null;
+  locked = false;
+  $('question-hint').innerHTML = `<button class="hint-toggle" onclick="showHint()">Show Hint</button>`;
+  $('main-btn').textContent = 'Submit Answer';
+  drawPath();
+  renderLiveTable($('sheet-search-input').value);
+  scrollRowIntoView(currentStudentIndex);
+  startTimer();
+}
+
+function showHint() {
+  if (!currentQ.hint) return;
+  $('question-hint').innerHTML = `<span class="hint-content">💡 Hint: ${currentQ.hint}</span>`;
+}
+
+function pick(i) {
+  if (locked) return;
+  selected = i;
+  playTone('select');
+  [...$('options-container').children].forEach((b, j) => b.classList.toggle('sel', j === i));
+}
+
+function submitStudentAnswer() {
+  if (locked) {
+    nextTurn();
+    return;
+  }
+  if (selected === null) {
+    playTone('wrong');
+    $('ai-status-text').textContent = 'Please choose an option before submitting.';
+    return;
+  }
+
+  locked = true;
+  clearInterval(timerId);
+
+  const student = students[currentStudentIndex];
+  const ok = selected === currentQ.correct;
+  const opts = [...$('options-container').children];
+
+  opts.forEach(b => {
+    b.disabled = true;
+    b.classList.remove('sel');
+  });
+
+  opts[currentQ.correct].classList.add('right');
+  if (!ok && opts[selected]) opts[selected].classList.add('wrong');
+
+  // Record Marks
+  const reg = student['Reg No'];
+  if (ok) {
+    studentScores[reg] = (studentScores[reg] || 0) + 1;
+    roundResults[currentRound - 1][currentStudentIndex] = 1;
+    streak++;
+    playTone('correct');
+    $('ai-status-text').textContent = `✓ Correct! (+1 mark recorded for ${student.Name})`;
+    burstConfetti(innerWidth / 2, innerHeight * 0.45, 50);
+  } else {
+    roundResults[currentRound - 1][currentStudentIndex] = 0;
+    streak = 0;
+    playTone('wrong');
+    $('ai-status-text').textContent = `✗ Incorrect. Correct answer was ${'ABCD'[currentQ.correct]}.`;
+  }
+
+  // Backup to localStorage & live Excel
+  autoSaveBackup();
+  renderLiveTable($('sheet-search-input').value);
+  flashRow(currentStudentIndex, ok);
+
+  drawPath();
+  $('main-btn').textContent = 'Next Student →';
+}
+
+function skipCandidate() {
+  if (locked) {
+    nextTurn();
+    return;
+  }
+  locked = true;
+  clearInterval(timerId);
+
+  const student = students[currentStudentIndex];
+  roundResults[currentRound - 1][currentStudentIndex] = 'absent';
+  $('ai-status-text').textContent = `Student ${student.Name} skipped / absent.`;
+
+  autoSaveBackup();
+  renderLiveTable($('sheet-search-input').value);
+  flashRow(currentStudentIndex, false);
+
+  drawPath();
+  nextTurn();
+}
+
+function nextTurn() {
+  currentStudentIndex++;
+  if (currentStudentIndex >= students.length) {
+    currentStudentIndex = 0;
+    currentRound++;
+  }
+  loadCurrentTurn();
+}
+
+/* Local storage backup to prevent any data loss */
+function autoSaveBackup() {
+  try {
+    const state = {
+      scores: studentScores,
+      results: roundResults,
+      studentIndex: currentStudentIndex,
+      round: currentRound
+    };
+    localStorage.setItem('szabist_bsai_quiz_backup', JSON.stringify(state));
+    $('save-status-pill').textContent = 'Auto-Saved ✓';
+    setTimeout(() => $('save-status-pill').textContent = 'Auto-Save: Active', 1500);
+  } catch(e) {}
+}
+
+function countUp(id, to, suffix) {
+  const el = $(id);
+  const t0 = performance.now();
+  (function f(t) {
+    const k = Math.min(1, (t - t0) / 1000);
+    el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))) + (suffix || '');
+    if (k < 1) requestAnimationFrame(f);
+  })(t0);
+}
+
+function finishClassQuiz() {
+  clearInterval(timerId);
+  $('quiz-screen').classList.add('hidden');
+  $('complete-screen').classList.remove('hidden');
+
+  const total = Object.values(studentScores).reduce((a, b) => a + b, 0);
+  countUp('st-total', total);
+  countUp('st-acc', Math.round(100 * total / (students.length * ROUNDS)), '%');
+  countUp('st-perfect', Object.values(studentScores).filter(v => v === ROUNDS).length);
+
+  $('ai-status-text').textContent = 'Quiz session finished. All scores recorded in live sheet.';
+  playTone('correct');
+
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => burstConfetti(innerWidth * (0.2 + 0.6 * Math.random()), innerHeight * 0.35, 60), i * 300);
+  }
+}
+
+function downloadClassExcel() {
+  let ws, wb;
+  if (uploadedWorkbook) {
+    wb = uploadedWorkbook;
+    ws = wb.Sheets[wb.SheetNames[0]];
+    let data = XLSX.utils.sheet_to_json(ws);
+    data.forEach(row => {
+      let reg = String(row['Reg No']).trim();
+      Object.keys(studentScores).forEach(studentReg => {
+        if (reg === String(studentReg).trim()) {
+          let marks = studentScores[studentReg];
+          row['Quiz 1'] = marks;
+          row['Quiz Total'] = marks;
+        }
+      });
+    });
+    wb.Sheets[wb.SheetNames[0]] = XLSX.utils.json_to_sheet(data);
+  } else {
+    wb = XLSX.utils.book_new();
+    const data = students.map((s, idx) => ({
+      "Reg No": s['Reg No'],
+      "Name": s.Name,
+      "Round 1": roundResults[0][idx] === 1 ? 1 : 0,
+      "Round 2": roundResults[1][idx] === 1 ? 1 : 0,
+      "Quiz 1": studentScores[s['Reg No']] || 0,
+      "Quiz Total": studentScores[s['Reg No']] || 0
+    }));
+    ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "Quiz Marks");
+  }
+
+  XLSX.writeFile(wb, 'BSAI3B_Updated_Quiz_Marks.xlsx');
+  $('ai-status-text').textContent = 'Excel file downloaded successfully!';
+}
+
+/* ==================== 6. SUBTLE NEURAL CANVAS ==================== */
+let cv, cx, nodes = [], confetti = [];
+
+function initFx() {
+  cv = $('fx');
+  cx = cv.getContext('2d');
+  const size = () => { cv.width = innerWidth; cv.height = innerHeight; };
+  size();
+  window.addEventListener('resize', size);
+
+  nodes = Array.from({ length: 32 }, () => ({
+    x: Math.random() * innerWidth,
+    y: Math.random() * innerHeight,
+    vx: (Math.random() - 0.5) * 0.35,
+    vy: (Math.random() - 0.5) * 0.35
+  }));
+
+  requestAnimationFrame(render);
+}
+
+function burstConfetti(x, y, n) {
+  const colors = ['#2563eb', '#059669', '#d97706', '#dc2626', '#6366f1'];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283;
+    const s = 3 + Math.random() * 6;
+    confetti.push({
+      x, y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s - 3,
+      r: 3 + Math.random() * 3,
+      c: colors[i % colors.length],
+      life: 1,
+      rot: Math.random() * 6
+    });
+  }
+}
+
+function render() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+
+  nodes.forEach(n => {
+    n.x += n.vx;
+    n.y += n.vy;
+    if (n.x < 0 || n.x > cv.width) n.vx *= -1;
+    if (n.y < 0 || n.y > cv.height) n.vy *= -1;
+  });
+
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
+      if (d < 150) {
+        cx.strokeStyle = `rgba(37, 99, 235, ${0.12 * (1 - d / 150)})`;
+        cx.lineWidth = 1;
+        cx.beginPath();
+        cx.moveTo(nodes[i].x, nodes[i].y);
+        cx.lineTo(nodes[j].x, nodes[j].y);
+        cx.stroke();
+      }
+    }
+    cx.fillStyle = 'rgba(37, 99, 235, 0.25)';
+    cx.beginPath();
+    cx.arc(nodes[i].x, nodes[i].y, 2.5, 0, 6.283);
+    cx.fill();
+  }
+
+  confetti = confetti.filter(b => b.life > 0);
+  confetti.forEach(b => {
+    b.x += b.vx;
+    b.y += b.vy;
+    b.vy += 0.25;
+    b.vx *= 0.98;
+    b.life -= 0.018;
+    b.rot += 0.2;
+    cx.save();
+    cx.globalAlpha = Math.max(b.life, 0);
+    cx.translate(b.x, b.y);
+    cx.rotate(b.rot);
+    cx.fillStyle = b.c;
+    cx.fillRect(-b.r, -b.r / 2, b.r * 2, b.r);
+    cx.restore();
+  });
+
+  requestAnimationFrame(render);
+}
+</script>
+</body>
+</html>
